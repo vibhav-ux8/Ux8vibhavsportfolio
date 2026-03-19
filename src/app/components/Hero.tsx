@@ -70,7 +70,7 @@ export function Hero() {
               whileTap={{ scale: 0.98 }}
             >
               <Link
-                to="/projects"
+                to="/work"
                 className="inline-flex items-center gap-2 bg-foreground text-background px-8 py-4 rounded hover:bg-foreground/90 transition-colors text-base font-medium"
               >
                 View Projects

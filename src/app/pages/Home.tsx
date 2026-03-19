@@ -166,7 +166,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="flex flex-wrap items-center justify-center gap-4"
             >
-              <Link to="/projects">
+              <Link to="/work">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}

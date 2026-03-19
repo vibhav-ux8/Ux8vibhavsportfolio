@@ -34,7 +34,7 @@ export function Navigation() {
             <img 
               src={logoImage} 
               alt="Vibhav Kamat UX Portfolio" 
-              className="h-12 w-auto"
+              className="h-12 w-auto rounded-[4px]"
             />
           </Link>
 
