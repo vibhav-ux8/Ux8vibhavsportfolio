@@ -12,6 +12,7 @@ import storyImage from "figma:asset/0418e59b0a42e10c2978165728c33ac9f5e7486e.png
 import storyImage1 from "figma:asset/42ddec3b3b3f0fcea97f963ff30bdc2d9fa927e0.png";
 import storyImage2 from "figma:asset/7d6742cc0e7238c6630ddb4a8d10adc4ccef6883.png";
 import storyImage3 from "figma:asset/dbbcc6b446f40326ac0658af0e618cf1372ed220.png";
+import predictContextImage from "figma:asset/485b0e9763c9f09882949ad898f424a052b9318a.png";
 import contentImage1 from "figma:asset/3aec6e0300112e1fb9394e5fbf8ade4a496a771b.png";
 import contentImage2 from "figma:asset/41cd0bb93ca68087159f7bf0a5082e4af29039d2.png";
 import Slider from "react-slick";
@@ -83,7 +84,7 @@ export default function CaseStudy() {
   const getProjectImages = (projectId: string | undefined) => {
     const imageMap: Record<string, { carouselImages: string[], longImage: string }> = {
       "ai-assisted-decision-platform": {
-        carouselImages: [storyImage1, storyImage2, storyImage3],
+        carouselImages: [predictContextImage, storyImage1, storyImage2, storyImage3],
         longImage: storyImage
       },
       "enterprise-design-system": {
@@ -272,26 +273,28 @@ export default function CaseStudy() {
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
     e.preventDefault();
-    
-    // Immediately update active state
+
+    // Update active state
     setActiveSection(sectionId);
     setIsManualClick(true);
-    
+
     // Clear any existing timeout
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
-    
-    const element = document.getElementById(sectionId);
-    if (element) {
-      // Use scrollIntoView for reliable scrolling behavior
-      element.scrollIntoView({
+
+    // Get the target element
+    const targetElement = document.getElementById(sectionId);
+
+    if (targetElement) {
+      // Use scrollIntoView which respects CSS scroll-margin
+      targetElement.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });
     }
-    
-    // Re-enable observer after scroll animation completes
+
+    // Re-enable observer after scroll completes
     scrollTimeoutRef.current = setTimeout(() => {
       setIsManualClick(false);
     }, 800);
@@ -469,111 +472,111 @@ export default function CaseStudy() {
           <div className="lg:hidden sticky top-20 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
             <div className="px-6 py-3">
               <div className="grid grid-cols-5 gap-x-6 gap-y-3.5 mb-2.5">
-                <a 
-                  href="#cover" 
+                <a
+                  href="#cover"
                   onClick={(e) => handleNavClick(e, "cover")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "cover" 
-                      ? "text-primary scale-110" 
+                    activeSection === "cover"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   00
                 </a>
-                <a 
-                  href="#context" 
+                <a
+                  href="#context"
                   onClick={(e) => handleNavClick(e, "context")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "context" 
-                      ? "text-primary scale-110" 
+                    activeSection === "context"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   01
                 </a>
-                <a 
-                  href="#product-vision" 
+                <a
+                  href="#product-vision"
                   onClick={(e) => handleNavClick(e, "product-vision")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "product-vision" 
-                      ? "text-primary scale-110" 
+                    activeSection === "product-vision"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   02
                 </a>
-                <a 
-                  href="#user-research" 
+                <a
+                  href="#user-research"
                   onClick={(e) => handleNavClick(e, "user-research")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "user-research" 
-                      ? "text-primary scale-110" 
+                    activeSection === "user-research"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   03
                 </a>
-                <a 
-                  href="#design-direction" 
+                <a
+                  href="#design-direction"
                   onClick={(e) => handleNavClick(e, "design-direction")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "design-direction" 
-                      ? "text-primary scale-110" 
+                    activeSection === "design-direction"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   04
                 </a>
-                <a 
-                  href="#methods-processes" 
+                <a
+                  href="#methods-processes"
                   onClick={(e) => handleNavClick(e, "methods-processes")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "methods-processes" 
-                      ? "text-primary scale-110" 
+                    activeSection === "methods-processes"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   05
                 </a>
-                <a 
-                  href="#design-deliverables" 
+                <a
+                  href="#design-deliverables"
                   onClick={(e) => handleNavClick(e, "design-deliverables")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "design-deliverables" 
-                      ? "text-primary scale-110" 
+                    activeSection === "design-deliverables"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   06
                 </a>
-                <a 
-                  href="#analysis-impact" 
+                <a
+                  href="#analysis-impact"
                   onClick={(e) => handleNavClick(e, "analysis-impact")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "analysis-impact" 
-                      ? "text-primary scale-110" 
+                    activeSection === "analysis-impact"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   07
                 </a>
-                <a 
-                  href="#future-scope" 
+                <a
+                  href="#future-scope"
                   onClick={(e) => handleNavClick(e, "future-scope")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "future-scope" 
-                      ? "text-primary scale-110" 
+                    activeSection === "future-scope"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >
                   08
                 </a>
-                <a 
-                  href="#credits" 
+                <a
+                  href="#credits"
                   onClick={(e) => handleNavClick(e, "credits")}
                   className={`text-center text-[15px] font-bold tabular-nums transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer ${
-                    activeSection === "credits" 
-                      ? "text-primary scale-110" 
+                    activeSection === "credits"
+                      ? "text-primary scale-110"
                       : "text-muted-foreground/60 hover:text-foreground active:text-primary"
                   }`}
                 >

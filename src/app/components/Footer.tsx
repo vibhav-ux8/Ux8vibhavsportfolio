@@ -48,9 +48,17 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-muted-foreground text-center">
-            © {new Date().getFullYear()} Vibhav Kamat. All rights reserved.
-          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Vibhav Kamat. All rights reserved.
+            </p>
+            <Link
+              to="/admin/login"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Admin Login
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

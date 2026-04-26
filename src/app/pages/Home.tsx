@@ -3,13 +3,23 @@ import { Footer } from "../components/Footer";
 import { motion } from "motion/react";
 import { Mail, Linkedin, Send, Users, Target, Lightbulb, TrendingUp, Award, Sparkles, ArrowRight, Building2, Globe, Palette, Clock, Network, BarChart3, Zap } from "lucide-react";
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logoImage from "../../imports/UX8_Logo_2.svg";
 import ux8IconSvg from "../../imports/UX8_icon.svg";
 import dharmicFuturesIcon from "figma:asset/3814864fe79b8dfaf3cac21e9286d36e89b8d371.png";
 import srujanalayaIcon from "figma:asset/b923f899c2bae651111cebc7798a8737cf209542.png";
 
 export default function Home() {
+  // Load CMS data from localStorage
+  const [cmsData, setCmsData] = useState<any>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("cmsHomeData");
+    if (saved) {
+      setCmsData(JSON.parse(saved));
+    }
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -146,11 +156,8 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.1 }}
               className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.1] tracking-tight mb-6"
             >
-              Designing intelligent systems<br />
-              that transform complexity<br />
-              <span className="italic bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                into clarity
-              </span>
+              {cmsData?.hero?.heading1 || "Envisioning smart UI-UX"}<br />
+              <span className="italic bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">{cmsData?.hero?.heading2 || "with contextual awareness"}</span>
             </motion.h1>
 
             <motion.p
@@ -158,7 +165,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto"
             >
-              Bridging AI innovation, enterprise systems, and public-sector digital infrastructure through strategic design leadership.
+              {cmsData?.hero?.subtitle || "Bridging AI innovation, enterprise systems, and public-sector digital infrastructure through strategic design leadership."}
             </motion.p>
 
             <motion.div
@@ -172,18 +179,18 @@ export default function Home() {
                   whileTap={{ scale: 0.98 }}
                   className="group px-8 py-4 bg-foreground text-background rounded-full font-medium flex items-center gap-2 shadow-lg"
                 >
-                  View Projects
+                  {cmsData?.hero?.button1 || "View Projects"}
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </motion.button>
               </Link>
-              
+
               <Link to="/contact">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
                   className="px-8 py-4 bg-background border-2 border-border rounded-full font-medium hover:border-foreground transition-colors"
                 >
-                  Let's Connect
+                  {cmsData?.hero?.button2 || "Let's Connect"}
                 </motion.button>
               </Link>
             </motion.div>

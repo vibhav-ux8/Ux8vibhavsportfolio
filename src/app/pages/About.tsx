@@ -3,32 +3,35 @@ import { Footer } from "../components/Footer";
 import { motion } from "motion/react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { Hammer, Eye, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
 import profileImage from "figma:asset/1804ff83437d465d1844d7bdefee7249fb9aa493.png";
 
 export default function About() {
+  // Load CMS data from localStorage
+  const [cmsData, setCmsData] = useState<any>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("cmsAboutData");
+    if (saved) {
+      setCmsData(JSON.parse(saved));
+    }
+  }, []);
   const skills = [
-    "Product Strategy",
-    "User Research",
+    "Enterprise UX",
+    "Complex Systems Design",
+    "AI-assisted Workflows",
+    "Investigative & Data-heavy Platforms",
     "Design Systems",
-    "Prototyping",
-    "Accessibility (WCAG 2.1 AAA)",
-    "Cross-functional Leadership",
-    "Workshop Facilitation",
-    "Data Visualization",
-    "AI/ML Product Design",
-    "Government Digital Services",
+    "Information Architecture",
+    "Interaction Design",
+    "High-security & Regulated Environments",
   ];
 
   const tools = [
     "Figma",
     "Adobe Creative Suite",
-    "Principle",
-    "Miro",
-    "Notion",
-    "Jira",
-    "React (basic)",
-    "D3.js",
-    "HTML/CSS",
+    "Prototyping Tools",
+    "Design System Documentation",
   ];
 
   // Animation variants
@@ -143,17 +146,17 @@ export default function About() {
                 
                 {/* Name */}
                 <h1 className="text-[56px] md:text-[72px] lg:text-[88px] font-medium mb-6 tracking-[-0.03em] leading-[0.95]" style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}>
-                  Vibhav Kamat
+                  {cmsData?.hero?.name || "Vibhav Kamat"}
                 </h1>
-                
+
                 <p className="text-[19px] md:text-[21px] text-muted-foreground max-w-4xl leading-[1.6] tracking-[-0.011em]">
-                  I have always been curious about the relationship between humans, technology, the times and environments we live in.
+                  {cmsData?.hero?.lead || "I have always been curious about the relationship between humans, technology, the times and environments we live in."}
                 </p>
-                
+
                 <div className="w-12 h-[1px] bg-foreground/20" />
-                
+
                 <p className="text-[17px] sm:text-[18px] md:text-[19px] font-[400] leading-[1.7] sm:leading-[1.75] tracking-[-0.012em] sm:tracking-[-0.013em] text-muted-foreground">
-                  My journey in design has been shaped by observing how people interact with systems—social, cultural, and technological.
+                  {cmsData?.hero?.journey || "My journey in design has been shaped by observing how people interact with systems—social, cultural, and technological."}
                 </p>
               </div>
 
@@ -164,21 +167,21 @@ export default function About() {
                   
                   <div className="space-y-5 sm:space-y-6 text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75">
                     <p>
-                      I graduated from Goa College of Art, where I studied Applied Art and Audio-Visual Communication, and later continued my Master's journey with the National Institute of Design (NID) as part of the New Media Design program. These experiences helped me explore design not merely as visual expression, but as a way of understanding complex relations and interactions between people, technology, policy, economy and culture.
+                      {cmsData?.biography?.background1 || "I graduated from Goa College of Art, where I studied Applied Art and Audio-Visual Communication, and later continued my Master's journey with the National Institute of Design (NID) as part of the New Media Design program. These experiences helped me explore design not merely as visual expression, but as a way of understanding complex relations and interactions between people, technology, policy, economy and culture."}
                     </p>
-                    
+
                     <p>
-                      Growing up in Antruz Mahal in Goa, a region deeply rooted in cultural traditions and the temple ecosystem, gave me a unique exposure to an integral and rhythmic community life, social networks and profound meanings. Observing everyday life in such a culturally rich environment cultivated a deep curiosity about nature, ancestral wisdom, human behavior, and the philosophy of technology.
+                      {cmsData?.biography?.background2 || "Growing up in Antruz Mahal in Goa, a region deeply rooted in cultural traditions and the temple ecosystem, gave me a unique exposure to an integral and rhythmic community life, social networks and profound meanings. Observing everyday life in such a culturally rich environment cultivated a deep curiosity about nature, ancestral wisdom, human behavior, and the philosophy of technology."}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-6 sm:space-y-8 pt-4 sm:pt-8">
                   <h3 className="text-[11px] tracking-[0.12em] uppercase text-muted-foreground font-medium">Practice</h3>
-                  
+
                   <div className="space-y-5 sm:space-y-6 text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75">
                     <p>
-                      Over the years, my work has taken me into the technology sector across critical domains related to nation-building and security. Working with law enforcement agencies, governance systems, and intelligence contexts, I have been involved in designing AI and machine-learning driven tools for high-pressure environments, where decisions carry real-world consequences.
+                      {cmsData?.biography?.practice1 || "Over the years, my work has taken me into the technology sector across critical domains related to nation-building and security. Working with law enforcement agencies, governance systems, and intelligence contexts, I have been involved in designing AI and machine-learning driven tools for high-pressure environments, where decisions carry real-world consequences."}
                     </p>
                     
                     <p>
@@ -547,61 +550,97 @@ export default function About() {
             className="mb-24"
           >
             <h2 className="text-2xl font-medium mb-8">Experience Highlights</h2>
-            <motion.div 
+            <motion.div
               variants={staggerContainer}
               className="space-y-8"
             >
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 transition={{ duration: 0.5 }}
                 whileHover={{ x: 4 }}
                 className="border-l-2 border-primary pl-6"
               >
-                <p className="text-sm text-muted-foreground mb-2">2022 - Present</p>
+                <p className="text-sm text-muted-foreground mb-2">Dec 2025 - Present</p>
                 <h3 className="text-xl font-medium mb-2">
-                  Principal Product Designer
+                  UI/UX Design Consultant
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  Digital Services Agency (Federal Contractor)
+                  Goa
                 </p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Leading design for AI-powered platforms serving 12+ federal agencies. Established design practice and mentored team of 6 designers. Drove adoption of accessibility standards and inclusive design methodologies across organization.
+                  Providing UX strategy and product design for cybersecurity and governance-focused digital products. Clients include Pinaca Technologies / Saptang Labs (investigative & security systems), Coolture Design (tangible product innovation & Indian timekeeping systems). Focus: scalable digital systems, product clarity, and strategic UX alignment.
                 </p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 transition={{ duration: 0.5 }}
                 whileHover={{ x: 4 }}
                 className="border-l-2 border-muted pl-6"
               >
-                <p className="text-sm text-muted-foreground mb-2">2019 - 2022</p>
+                <p className="text-sm text-muted-foreground mb-2">Dec 2023 - Nov 2025</p>
                 <h3 className="text-xl font-medium mb-2">
-                  Senior Product Designer, Design Systems Lead
+                  Senior UI/UX Designer
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  TechCorp (Enterprise SaaS, Series D)
+                  Pinaca Technologies
                 </p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Architected enterprise design system serving 15 product teams and 200+ designers/engineers. Led design for flagship analytics platform ($400M+ ARR). Reduced design-to-development time by 60% and improved product consistency across portfolio.
+                  Led Central Design Team for cybersecurity and investigative intelligence platforms. Redesigned multi-layered investigative dashboards, reducing analyst task completion time by ~25–35%. Built and scaled a unified design system across 3+ security products, reducing UI inconsistencies by ~40% and accelerating feature release cycles by 20–25%. Mentored 6 designers and established centralized UX documentation standards.
                 </p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 transition={{ duration: 0.5 }}
                 whileHover={{ x: 4 }}
                 className="border-l-2 border-muted pl-6"
               >
-                <p className="text-sm text-muted-foreground mb-2">2016 - 2019</p>
+                <p className="text-sm text-muted-foreground mb-2">Jul 2022 - Nov 2023</p>
                 <h3 className="text-xl font-medium mb-2">
-                  Product Designer
+                  UI/UX & Product Designer
                 </h3>
                 <p className="text-muted-foreground mb-2">
-                  HealthTech Innovations (Healthcare Platform)
+                  Folium Labs (Blockchain Fintech Startup) | Bengaluru
                 </p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Redesigned patient portal serving 2M+ users across regional healthcare network. Led accessibility initiatives achieving WCAG 2.1 AAA compliance. Increased patient adoption from 22% to 68% through user research and iterative design.
+                  Designed UX for blockchain-based fintech platform serving B2B and digital asset workflows. Led visual language and interaction design for dashboards, blockchain workflows, and user journeys. Simplified complex financial and blockchain processes into intuitive, task-driven flows. Created data-heavy interfaces optimized for decision-making and operational efficiency.
+                </p>
+              </motion.div>
+
+              <motion.div
+                variants={fadeInUp}
+                transition={{ duration: 0.5 }}
+                whileHover={{ x: 4 }}
+                className="border-l-2 border-muted pl-6"
+              >
+                <p className="text-sm text-muted-foreground mb-2">2017 - 2020</p>
+                <h3 className="text-xl font-medium mb-2">
+                  Design Consultancy
+                </h3>
+                <p className="text-muted-foreground mb-2">
+                  Goa, Hyderabad & Chennai
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Experience design for public events and interactive environments. Designed spatial and experiential systems for children's learning spaces. Led conceptual design experiment "Game of Trust – Swayambhu Seed".
+                </p>
+              </motion.div>
+
+              <motion.div
+                variants={fadeInUp}
+                transition={{ duration: 0.5 }}
+                whileHover={{ x: 4 }}
+                className="border-l-2 border-muted pl-6"
+              >
+                <p className="text-sm text-muted-foreground mb-2">2011 - 2013</p>
+                <h3 className="text-xl font-medium mb-2">
+                  Visual Designer
+                </h3>
+                <p className="text-muted-foreground mb-2">
+                  Cognizant Technology Solutions | Pune
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Delivered visual and communication design for enterprise clients. Contributed to digital system standardization and brand consistency initiatives.
                 </p>
               </motion.div>
             </motion.div>
@@ -625,25 +664,43 @@ export default function About() {
                 <div>
                   <p className="font-medium">M.Des (New Media)</p>
                   <p className="text-sm text-muted-foreground">
-                    National Institute of Design, Gujarat
+                    National Institute of Design, Gujarat (2014–2017)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Transdisciplinary program exploring intersections of culture, technology, and systems design
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium">B.F.A (Applied Art)</p>
+                  <p className="font-medium">PG Diploma in Public Leadership</p>
                   <p className="text-sm text-muted-foreground">
-                    Goa College of Art, Goa
+                    Rashtram, Rishihood University (2021–2022)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Focused on India-centric public policy, governance systems, and institutional design
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium">B.F.A (Applied Arts)</p>
+                  <p className="text-sm text-muted-foreground">
+                    Goa College of Art, Goa (2007–2011)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Foundation in visual communication, advertising, film-making, and design fundamentals
                   </p>
                 </div>
               </div>
             </motion.div>
 
             <motion.div variants={fadeInUp} transition={{ duration: 0.6 }}>
-              <h2 className="text-2xl font-medium mb-6">Recognition</h2>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Best Research Tool, Science Visualization Conference (2023)</li>
-                <li>• Featured in UXPA Magazine: "Designing for Government" (2024)</li>
-                <li>• Speaker at Design Systems Summit (2023, 2024)</li>
-              </ul>
+              <h2 className="text-2xl font-medium mb-6">Current Focus</h2>
+              <div className="space-y-3">
+                <div>
+                  <p className="font-medium">UI/UX for Agentic AI Systems</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Designing human-AI collaboration models for critical and decision-driven sectors
+                  </p>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         </div>
