@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router";
+import { useEffect } from "react";
 import Home from "./pages/Home";
 import Projects from "./pages/Projects";
 import Work from "./pages/Work";
@@ -14,6 +15,7 @@ import EditProject from "./pages/EditProject";
 import EditBlogPost from "./pages/EditBlogPost";
 import NewBlogPost from "./pages/NewBlogPost";
 import { AdminViewProvider } from "./contexts/AdminViewContext";
+import { initializeStorage } from "./lib/supabase";
 
 const NotFound = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -28,6 +30,11 @@ const NotFound = () => (
 );
 
 export default function App() {
+  useEffect(() => {
+    // Initialize Supabase storage bucket on app load
+    initializeStorage();
+  }, []);
+
   return (
     <BrowserRouter>
       <AdminViewProvider>

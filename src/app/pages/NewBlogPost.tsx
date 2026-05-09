@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { 
-  ArrowLeft, Save, Calendar, Clock, 
-  Plus, Trash2, Type, Heading2, Image as ImageIcon, 
-  Music, Video, ChevronUp, ChevronDown, GripVertical, Edit2, Check 
+import {
+  ArrowLeft, Save, Calendar, Clock,
+  Plus, Trash2, Type, Heading2, Image as ImageIcon,
+  Music, Video, ChevronUp, ChevronDown, GripVertical, Edit2, Check
 } from "lucide-react";
 import { ContentBlock } from "../data/blog";
+import { ImageUpload } from "../components/ImageUpload";
 
 export default function NewBlogPost() {
   const navigate = useNavigate();
@@ -214,19 +215,18 @@ export default function NewBlogPost() {
 
             {/* Image Block Editor */}
             {block.type === 'image' && (
-              <>
-                <input
-                  type="url"
+              <div className="space-y-3">
+                <ImageUpload
                   value={block.content}
-                  onChange={(e) => updateContentBlock(block.id, { content: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Image URL (https://...)"
+                  onChange={(url) => updateContentBlock(block.id, { content: url })}
+                  path="blog/content/"
+                  label="Upload Image"
                 />
                 <input
                   type="text"
                   value={block.metadata?.alt || ''}
-                  onChange={(e) => updateContentBlock(block.id, { 
-                    metadata: { ...block.metadata, alt: e.target.value } 
+                  onChange={(e) => updateContentBlock(block.id, {
+                    metadata: { ...block.metadata, alt: e.target.value }
                   })}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Alt text (for accessibility)"
@@ -234,16 +234,13 @@ export default function NewBlogPost() {
                 <input
                   type="text"
                   value={block.metadata?.caption || ''}
-                  onChange={(e) => updateContentBlock(block.id, { 
-                    metadata: { ...block.metadata, caption: e.target.value } 
+                  onChange={(e) => updateContentBlock(block.id, {
+                    metadata: { ...block.metadata, caption: e.target.value }
                   })}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Caption (optional)"
                 />
-                {block.content && (
-                  <img src={block.content} alt={block.metadata?.alt || ''} className="w-full rounded-lg mt-2" />
-                )}
-              </>
+              </div>
             )}
 
             {/* Audio Block Editor */}
@@ -442,24 +439,13 @@ export default function NewBlogPost() {
             transition={{ duration: 0.5 }}
             className="mb-12"
           >
-            <div className="aspect-[21/9] overflow-hidden rounded-lg bg-muted mb-8 relative group">
-              <img
-                src={postData.image}
-                alt={postData.title}
-                className="w-full h-full object-cover"
+            <div className="mb-8">
+              <ImageUpload
+                value={postData.image}
+                onChange={(url) => setPostData({ ...postData, image: url })}
+                path="blog/featured/"
+                label="Featured Image"
               />
-              <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                <div className="w-full max-w-md">
-                  <label className="block text-sm font-medium mb-2">Image URL</label>
-                  <input
-                    type="url"
-                    value={postData.image}
-                    onChange={(e) => setPostData({ ...postData, image: e.target.value })}
-                    className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="https://images.unsplash.com/..."
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Tags */}
