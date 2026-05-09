@@ -1,5 +1,5 @@
 import { useParams, Link, Navigate } from "react-router";
-import { projects } from "../data/projects";
+import { getProjectById } from "../data/projects";
 import { ArrowLeft, ArrowUp, Layers, ThumbsUp, Heart, Mail } from "lucide-react";
 import { ArrowsOut, ArrowsIn, CaretLeft, CaretRight, Plus, Minus } from "@phosphor-icons/react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
@@ -64,8 +64,8 @@ const CustomNextArrow = (props: any) => {
 
 export default function CaseStudy() {
   const { id } = useParams<{ id: string }>();
-  const project = id ? projects.find(p => p.id === id) : undefined;
-  
+  const project = id ? getProjectById(id) : undefined;
+
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("cover");
   const [isManualClick, setIsManualClick] = useState(false);
@@ -79,9 +79,43 @@ export default function CaseStudy() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
-  
+
+  // Load custom sections data from CMS if available
+  const sectionsData = (project as any)?.sectionsData;
+
+  // Helper to get content from sections
+  const getSectionContent = (sectionId: string, blockId: string, defaultValue: string = "") => {
+    if (!sectionsData) return defaultValue;
+    const section = sectionsData.find((s: any) => s.id === sectionId);
+    if (!section) return defaultValue;
+    const block = section.content.find((c: any) => c.id === blockId);
+    // Return empty string if block exists but content is empty (user deleted it)
+    // Only return default if block doesn't exist at all
+    return block !== undefined ? (block.content !== undefined ? block.content : "") : defaultValue;
+  };
+
   // Dynamic carousel and story images based on project
   const getProjectImages = (projectId: string | undefined) => {
+    // First check if there's custom carousel images in sectionsData
+    if (sectionsData) {
+      const contextSection = sectionsData.find((s: any) => s.id === "context");
+      if (contextSection) {
+        const carouselImages = contextSection.content
+          .filter((c: any) => c.id.startsWith("context-carousel-") && c.content)
+          .map((c: any) => c.content);
+        const longImageBlock = contextSection.content.find((c: any) => c.id === "context-long-image");
+        const longImage = longImageBlock?.content || "";
+
+        if (carouselImages.length > 0 || longImage) {
+          return {
+            carouselImages: carouselImages.length > 0 ? carouselImages : [predictContextImage],
+            longImage: longImage || storyImage
+          };
+        }
+      }
+    }
+
+    // Fall back to default image map
     const imageMap: Record<string, { carouselImages: string[], longImage: string }> = {
       "ai-assisted-decision-platform": {
         carouselImages: [predictContextImage, storyImage1, storyImage2, storyImage3],
@@ -983,25 +1017,33 @@ export default function CaseStudy() {
                       </div>
                     </motion.div>
 
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-120px" }}
-                      transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="mt-16 space-y-8"
-                    >
-                      <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                        Our design approach emphasized creating a cohesive user experience that seamlessly integrated complex workflows into intuitive interfaces. Through extensive user research and iterative prototyping, we developed interaction patterns that reduced cognitive load while maintaining the depth of functionality required by power users.
-                      </p>
+{(getSectionContent("context", "context-para-1") || getSectionContent("context", "context-para-2") || getSectionContent("context", "context-para-3")) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-120px" }}
+                        transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="mt-16 space-y-8"
+                      >
+                        {getSectionContent("context", "context-para-1") && (
+                          <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                            {getSectionContent("context", "context-para-1", "Our design approach emphasized creating a cohesive user experience that seamlessly integrated complex workflows into intuitive interfaces. Through extensive user research and iterative prototyping, we developed interaction patterns that reduced cognitive load while maintaining the depth of functionality required by power users.")}
+                          </p>
+                        )}
 
-                      <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                        The visual language we established balanced professional aesthetics with accessibility considerations, ensuring that the interface remained approachable for diverse user groups. Strategic use of white space, typography, and subtle animations created a sense of clarity and refinement throughout the product experience.
-                      </p>
+                        {getSectionContent("context", "context-para-2") && (
+                          <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                            {getSectionContent("context", "context-para-2", "The visual language we established balanced professional aesthetics with accessibility considerations, ensuring that the interface remained approachable for diverse user groups. Strategic use of white space, typography, and subtle animations created a sense of clarity and refinement throughout the product experience.")}
+                          </p>
+                        )}
 
-                      <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                        Cross-functional collaboration played a crucial role in translating stakeholder requirements into design solutions that addressed real user needs. Regular design reviews and usability testing sessions ensured alignment between business objectives, technical constraints, and user expectations throughout the development process.
-                      </p>
-                    </motion.div>
+                        {getSectionContent("context", "context-para-3") && (
+                          <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                            {getSectionContent("context", "context-para-3", "Cross-functional collaboration played a crucial role in translating stakeholder requirements into design solutions that addressed real user needs. Regular design reviews and usability testing sessions ensured alignment between business objectives, technical constraints, and user expectations throughout the development process.")}
+                          </p>
+                        )}
+                      </motion.div>
+                    )}
 
                     {/* Second Story Image */}
                     <motion.figure
@@ -1079,117 +1121,123 @@ export default function CaseStudy() {
                     Product Vision
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.research}
-                </p>
+{project.research && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {project.research}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Our vision centered on creating a cohesive ecosystem that would empower users to make informed decisions. Through extensive stakeholder interviews and user research, we identified key pain points and opportunities for innovation. The product strategy focused on scalability, accessibility, and seamless integration with existing workflows.
-                </p>
+                {getSectionContent("product-vision", "vision-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("product-vision", "vision-para-1", "Our vision centered on creating a cohesive ecosystem that would empower users to make informed decisions. Through extensive stakeholder interviews and user research, we identified key pain points and opportunities for innovation. The product strategy focused on scalability, accessibility, and seamless integration with existing workflows.")}
+                  </p>
+                )}
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage1);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
+                {getSectionContent("product-vision", "vision-image-1") && (
+                  <motion.figure
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="mb-12 group"
+                  >
+                    <div className="relative overflow-hidden">
+                      <motion.button
+                        onClick={() => {
+                          setFullscreenImage(getSectionContent("product-vision", "vision-image-1", contentImage1));
+                          setIsCarouselFullscreen(false);
+                          setIsFullscreen(true);
+                        }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
+                        aria-label="View fullscreen"
                       >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage1} alt="Product Vision" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Early strategic alignment sessions defining core product principles and user value propositions
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  We established clear principles that would guide all design decisions: prioritize user needs, maintain consistency across touchpoints, and ensure every interaction adds value. The roadmap was structured around iterative releases, allowing us to validate assumptions and incorporate feedback continuously.
-                </p>
-
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage2);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
+                        <motion.div
+                          whileHover={{ scale: 1.15 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ArrowsOut
+                            size={18}
+                            weight="bold"
+                            className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                          />
+                        </motion.div>
+                      </motion.button>
                       <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className="rounded-xl overflow-hidden shadow-lg"
                       >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
+                        <img src={getSectionContent("product-vision", "vision-image-1", contentImage1)} alt="Product Vision" className="w-full h-auto" />
                       </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage2} alt="Product Strategy" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Product roadmap visualization showing phased rollout and key milestone dependencies
-                  </figcaption>
-                </motion.figure>
+                    </div>
+                  </motion.figure>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  By aligning cross-functional teams around shared objectives and success metrics, we created a foundation for sustainable growth. The vision emphasized long-term impact over short-term gains, ensuring that every feature contributed to the broader product narrative and user value proposition.
-                </p>
+{getSectionContent("product-vision", "vision-para-2") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("product-vision", "vision-para-2", "We established clear principles that would guide all design decisions: prioritize user needs, maintain consistency across touchpoints, and ensure every interaction adds value. The roadmap was structured around iterative releases, allowing us to validate assumptions and incorporate feedback continuously.")}
+                  </p>
+                )}
+
+                {getSectionContent("product-vision", "vision-image-2") && (
+                  <motion.figure
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="mb-12 group"
+                  >
+                    <div className="relative overflow-hidden">
+                      <motion.button
+                        onClick={() => {
+                          setFullscreenImage(getSectionContent("product-vision", "vision-image-2", contentImage2));
+                          setIsCarouselFullscreen(false);
+                          setIsFullscreen(true);
+                        }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
+                        aria-label="View fullscreen"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.15 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ArrowsOut
+                            size={18}
+                            weight="bold"
+                            className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                          />
+                        </motion.div>
+                      </motion.button>
+                      <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className="rounded-xl overflow-hidden shadow-lg"
+                      >
+                        <img src={getSectionContent("product-vision", "vision-image-2", contentImage2)} alt="Product Strategy" className="w-full h-auto" />
+                      </motion.div>
+                    </div>
+                  </motion.figure>
+                )}
+
+{getSectionContent("product-vision", "vision-para-3") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                    {getSectionContent("product-vision", "vision-para-3", "By aligning cross-functional teams around shared objectives and success metrics, we created a foundation for sustainable growth. The vision emphasized long-term impact over short-term gains, ensuring that every feature contributed to the broader product narrative and user value proposition.")}
+                  </p>
+                )}
               </motion.section>
 
               {/* User Research Section */}
@@ -1213,13 +1261,17 @@ export default function CaseStudy() {
                     User Research
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.research}
-                </p>
+{project.research && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {project.research}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Our research methodology combined qualitative and quantitative approaches, ensuring comprehensive insights into user needs and behaviors. Through extensive stakeholder interviews and usability testing, we identified key pain points and opportunities for innovation.
-                </p>
+                {getSectionContent("user-research", "research-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("user-research", "research-para-1", "Our research methodology combined qualitative and quantitative approaches, ensuring comprehensive insights into user needs and behaviors. Through extensive stakeholder interviews and usability testing, we identified key pain points and opportunities for innovation.")}
+                  </p>
+                )}
               </motion.section>
 
               {/* Design Direction Section */}
@@ -1243,117 +1295,123 @@ export default function CaseStudy() {
                     Design Direction
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.designSystem}
-                </p>
+{project.designSystem && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {project.designSystem}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  The design direction was rooted in clarity and purpose. We explored various visual languages, testing different approaches with users to understand which resonated most effectively. Every element was intentionally crafted to support the user's journey while maintaining brand consistency.
-                </p>
+                {getSectionContent("design-direction", "direction-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("design-direction", "direction-para-1", "The design direction was rooted in clarity and purpose. We explored various visual languages, testing different approaches with users to understand which resonated most effectively. Every element was intentionally crafted to support the user's journey while maintaining brand consistency.")}
+                  </p>
+                )}
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage1);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
+                {getSectionContent("design-direction", "direction-image-1") && (
+                  <motion.figure
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="mb-12 group"
+                  >
+                    <div className="relative overflow-hidden">
+                      <motion.button
+                        onClick={() => {
+                          setFullscreenImage(getSectionContent("design-direction", "direction-image-1", contentImage1));
+                          setIsCarouselFullscreen(false);
+                          setIsFullscreen(true);
+                        }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
+                        aria-label="View fullscreen"
                       >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage1} alt="Design Direction" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Visual exploration showcasing typography hierarchy, color palette, and spacing principles
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Typography, color, and spatial relationships were carefully considered to create a harmonious system. We established a comprehensive design language that could scale across platforms while maintaining coherence. Accessibility was built into the foundation, ensuring inclusive experiences for all users.
-                </p>
-
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage2);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
+                        <motion.div
+                          whileHover={{ scale: 1.15 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ArrowsOut
+                            size={18}
+                            weight="bold"
+                            className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                          />
+                        </motion.div>
+                      </motion.button>
                       <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className="rounded-xl overflow-hidden shadow-lg"
                       >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
+                        <img src={getSectionContent("design-direction", "direction-image-1", contentImage1)} alt="Design Direction" className="w-full h-auto" />
                       </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage2} alt="Design System" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Component library documentation demonstrating reusable patterns and design tokens
-                  </figcaption>
-                </motion.figure>
+                    </div>
+                  </motion.figure>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  Through iterative refinement and close collaboration with development teams, we ensured the design direction was both aspirational and achievable. The result was a flexible framework that empowered teams to create consistent, high-quality experiences efficiently.
-                </p>
+{getSectionContent("design-direction", "direction-para-2") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("design-direction", "direction-para-2", "Typography, color, and spatial relationships were carefully considered to create a harmonious system. We established a comprehensive design language that could scale across platforms while maintaining coherence. Accessibility was built into the foundation, ensuring inclusive experiences for all users.")}
+                  </p>
+                )}
+
+                {getSectionContent("design-direction", "direction-image-2") && (
+                  <motion.figure
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="mb-12 group"
+                  >
+                    <div className="relative overflow-hidden">
+                      <motion.button
+                        onClick={() => {
+                          setFullscreenImage(getSectionContent("design-direction", "direction-image-2", contentImage2));
+                          setIsCarouselFullscreen(false);
+                          setIsFullscreen(true);
+                        }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
+                        aria-label="View fullscreen"
+                      >
+                        <motion.div
+                          whileHover={{ scale: 1.15 }}
+                          whileTap={{ scale: 0.9 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ArrowsOut
+                            size={18}
+                            weight="bold"
+                            className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                          />
+                        </motion.div>
+                      </motion.button>
+                      <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className="rounded-xl overflow-hidden shadow-lg"
+                      >
+                        <img src={getSectionContent("design-direction", "direction-image-2", contentImage2)} alt="Design System" className="w-full h-auto" />
+                      </motion.div>
+                    </div>
+                  </motion.figure>
+                )}
+
+{getSectionContent("design-direction", "direction-para-3") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                    {getSectionContent("design-direction", "direction-para-3", "Through iterative refinement and close collaboration with development teams, we ensured the design direction was both aspirational and achievable. The result was a flexible framework that empowered teams to create consistent, high-quality experiences efficiently.")}
+                  </p>
+                )}
               </motion.section>
 
               {/* Images Section */}
@@ -1396,7 +1454,7 @@ export default function CaseStudy() {
               )}
 
               {/* Methods & Processes Section */}
-              <motion.section 
+              <motion.section
                 id="methods-processes"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1408,129 +1466,41 @@ export default function CaseStudy() {
                   <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
                     05
                   </h2>
-                  <h3 
+                  <h3
                     onClick={() => setActiveSection("methods-processes")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
+                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
                     style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
                   >
                     Methods & Processes
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.prototyping}
-                </p>
+{getSectionContent("methods-processes", "methods-text-main", project.prototyping) && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("methods-processes", "methods-text-main", project.prototyping)}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Our methodology combined lean UX principles with design thinking frameworks. We facilitated collaborative workshops that brought together diverse perspectives, ensuring alignment across stakeholders. Rapid prototyping enabled us to test concepts early and often, reducing risk and accelerating learning.
-                </p>
+                {getSectionContent("methods-processes", "methods-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("methods-processes", "methods-para-1", "Our methodology combined lean UX principles with design thinking frameworks. We facilitated collaborative workshops that brought together diverse perspectives, ensuring alignment across stakeholders. Rapid prototyping enabled us to test concepts early and often, reducing risk and accelerating learning.")}
+                  </p>
+                )}
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage1);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage1} alt="Process Methods" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Workshop facilitation and collaborative ideation sessions with cross-functional team members
-                  </figcaption>
-                </motion.figure>
+                {getSectionContent("methods-processes", "methods-para-2") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("methods-processes", "methods-para-2", "User research formed the backbone of our process. Through interviews, usability testing, and analytics analysis, we gathered actionable insights that informed every decision. Cross-functional rituals ensured transparent communication and continuous alignment throughout the product lifecycle.")}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  User research formed the backbone of our process. Through interviews, usability testing, and analytics analysis, we gathered actionable insights that informed every decision. Cross-functional rituals ensured transparent communication and continuous alignment throughout the product lifecycle.
-                </p>
-
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage2);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage2} alt="Methodology" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    User research synthesis mapping insights to opportunities and prioritized feature development
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  By establishing clear rituals and documentation practices, we created a sustainable workflow that supported both speed and quality. The process remained flexible enough to adapt to emerging needs while maintaining the rigor necessary for delivering exceptional experiences.
-                </p>
+                {getSectionContent("methods-processes", "methods-para-3") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                    {getSectionContent("methods-processes", "methods-para-3", "By establishing clear rituals and documentation practices, we created a sustainable workflow that supported both speed and quality. The process remained flexible enough to adapt to emerging needs while maintaining the rigor necessary for delivering exceptional experiences.")}
+                  </p>
+                )}
               </motion.section>
 
               {/* Design Deliverables Section */}
-              <motion.section 
+              <motion.section
                 id="design-deliverables"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1542,77 +1512,35 @@ export default function CaseStudy() {
                   <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
                     06
                   </h2>
-                  <h3 
+                  <h3
                     onClick={() => setActiveSection("design-deliverables")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
+                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
                     style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
                   >
                     Design Deliverables
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.outcome}
-                </p>
+{getSectionContent("design-deliverables", "deliverables-text-main") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("design-deliverables", "deliverables-text-main", "Comprehensive design documentation including component libraries, style guides, interaction specifications, and prototype files. All deliverables were structured to support seamless handoff and ongoing maintenance.")}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Comprehensive documentation served as the single source of truth for the entire team. We created living style guides, pattern libraries, and detailed component specifications that evolved alongside the product. Clear documentation accelerated onboarding and ensured consistency across all touchpoints. Beyond static documentation, we established interactive prototypes and code examples that demonstrated best practices.
-                </p>
+                {getSectionContent("design-deliverables", "deliverables-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("design-deliverables", "deliverables-para-1", "Interactive prototypes validated design decisions and facilitated stakeholder alignment. High-fidelity mockups demonstrated visual refinement, while detailed specifications ensured engineering teams had the information needed for accurate implementation.")}
+                  </p>
+                )}
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage2);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage2} alt="Design System Documentation" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Living style guide with interactive examples and implementation guidelines for developers
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  Regular documentation reviews and updates kept the system relevant as the product matured. We fostered a culture of contribution where team members could propose improvements, ensuring the documentation remained valuable and reflective of current practices.
-                </p>
+                {getSectionContent("design-deliverables", "deliverables-para-2") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                    {getSectionContent("design-deliverables", "deliverables-para-2", "Regular documentation reviews and updates kept the system relevant as the product matured. We fostered a culture of contribution where team members could propose improvements, ensuring the documentation remained valuable and reflective of current practices.")}
+                  </p>
+                )}
               </motion.section>
 
               {/* Analysis & Impact Section */}
-              <motion.section 
+              <motion.section
                 id="analysis-impact"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1624,77 +1552,35 @@ export default function CaseStudy() {
                   <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
                     07
                   </h2>
-                  <h3 
+                  <h3
                     onClick={() => setActiveSection("analysis-impact")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
+                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
                     style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
                   >
                     Analysis & Impact
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.outcome}
-                </p>
+{getSectionContent("analysis-impact", "impact-text-main", project.outcome) && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("analysis-impact", "impact-text-main", project.outcome)}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Measuring impact required establishing clear success metrics from the outset. We tracked both quantitative indicators like task completion rates and qualitative feedback from user interviews. The data revealed significant improvements in user satisfaction and operational efficiency across key workflows. Beyond immediate metrics, we observed broader organizational impacts and lasting cultural change.
-                </p>
+                {getSectionContent("analysis-impact", "impact-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("analysis-impact", "impact-para-1", "Success metrics were tracked across user satisfaction, task completion rates, and business outcomes. Post-launch analysis revealed significant improvements in key performance indicators, validating our design approach and informing future iterations.")}
+                  </p>
+                )}
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage2);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage2} alt="Impact Metrics" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Quantitative dashboard showing KPI trends and user satisfaction metrics post-launch
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  Long-term analysis showed sustained improvements in user engagement and business outcomes. The foundation we built enabled rapid iteration on new features while maintaining quality standards. This project demonstrated how thoughtful design creates compounding value over time.
-                </p>
+                {getSectionContent("analysis-impact", "impact-para-2") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                    {getSectionContent("analysis-impact", "impact-para-2", "Long-term analysis showed sustained improvements in user engagement and business outcomes. The foundation we built enabled rapid iteration on new features while maintaining quality standards. This project demonstrated how thoughtful design creates compounding value over time.")}
+                  </p>
+                )}
               </motion.section>
 
-              {/* Outcome Section - Highlighted */}
-              <motion.section 
+              {/* Future Scope Section */}
+              <motion.section
                 id="future-scope"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1706,77 +1592,35 @@ export default function CaseStudy() {
                   <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
                     08
                   </h2>
-                  <h3 
+                  <h3
                     onClick={() => setActiveSection("future-scope")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
+                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
                     style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
                   >
                     Future Scope
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.outcome}
-                </p>
+{getSectionContent("future-scope", "future-text-main") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("future-scope", "future-text-main", "Future enhancements will focus on expanding platform capabilities, introducing advanced personalization features, and further optimizing performance. Ongoing user research continues to inform our product roadmap and design evolution.")}
+                  </p>
+                )}
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  Looking ahead, we identified several opportunities to extend and enhance the experience. Emerging technologies present possibilities for more personalized, intelligent interactions. We mapped a roadmap that balances innovation with stability, ensuring we build on the strong foundation already established.
-                </p>
+                {getSectionContent("future-scope", "future-para-1") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
+                    {getSectionContent("future-scope", "future-para-1", "We envision a system that adapts intelligently to user contexts, proactively addressing needs before they arise. Continued investment in accessibility, performance, and scalability will ensure the platform remains best-in-class as user needs evolve.")}
+                  </p>
+                )}
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage1);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage1} alt="Future Scope" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    Future roadmap outlining planned features and strategic expansion opportunities
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  Expanding into new platforms and channels will require thoughtful adaptation of our design system. We're exploring how to maintain consistency while respecting the unique constraints and opportunities of each context. User research continues to inform our prioritization and strategic direction. The next phase focuses on deepening engagement and expanding reach, using data and feedback to evolve the experience while remaining open to unexpected opportunities.
-                </p>
+                {getSectionContent("future-scope", "future-para-2") && (
+                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
+                    {getSectionContent("future-scope", "future-para-2", "Expanding into new platforms and channels will require thoughtful adaptation of our design system. We're exploring how to maintain consistency while respecting the unique constraints and opportunities of each context. User research continues to inform our prioritization and strategic direction. The next phase focuses on deepening engagement and expanding reach, using data and feedback to evolve the experience while remaining open to unexpected opportunities.")}
+                  </p>
+                )}
               </motion.section>
 
-              {/* Outcome Section - Highlighted */}
-              <motion.section 
+              {/* Credits Section */}
+              <motion.section
                 id="credits"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1788,73 +1632,64 @@ export default function CaseStudy() {
                   <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
                     09
                   </h2>
-                  <h3 
+                  <h3
                     onClick={() => setActiveSection("credits")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
+                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
                     style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
                   >
                     Credits
                   </h3>
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.outcome}
-                </p>
 
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  This project represents the collective effort of a talented, multidisciplinary team. From researchers and designers to engineers and product managers, each person brought unique expertise and perspective. The collaborative spirit and mutual respect among team members were instrumental to our success.
-                </p>
+                {/* Display all credits content blocks */}
+                {sectionsData && sectionsData.find((s: any) => s.id === "credits")?.content
+                  .filter((block: any) => block.content)
+                  .map((block: any) => (
+                    <div key={block.id} className="mb-8">
+                      {block.type === "text" && (
+                        <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                          {block.content}
+                        </p>
+                      )}
+                      {block.type === "image" && block.content && (
+                        <motion.figure
+                          initial={{ opacity: 0, y: 30 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                          className="group"
+                        >
+                          <div className="relative overflow-hidden">
+                            <img src={block.content} alt={block.caption || ""} className="w-full rounded-xl" />
+                          </div>
+                          {block.caption && (
+                            <figcaption className="mt-4 text-[15px] text-muted-foreground leading-[1.47] font-light">
+                              {block.caption}
+                            </figcaption>
+                          )}
+                        </motion.figure>
+                      )}
+                    </div>
+                  ))
+                }
 
-                <motion.figure
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="mb-12 group"
-                >
-                  <div className="relative overflow-hidden">
-                    <motion.button
-                      onClick={() => {
-                        setFullscreenImage(contentImage1);
-                        setIsCarouselFullscreen(false);
-                        setIsFullscreen(true);
-                      }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                      aria-label="View fullscreen"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <ArrowsOut 
-                          size={18} 
-                          weight="bold"
-                          className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
-                        />
-                      </motion.div>
-                    </motion.button>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl overflow-hidden shadow-lg"
-                    >
-                      <img src={contentImage1} alt="Team Credits" className="w-full h-auto" />
-                    </motion.div>
-                  </div>
-                  <figcaption className="mt-6 px-6 md:px-0 text-[15px] text-muted-foreground leading-[1.47] max-w-4xl font-light">
-                    The multidisciplinary team that collaborated on this project across design, research, and engineering
-                  </figcaption>
-                </motion.figure>
-
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                  Special recognition goes to our user research participants who provided invaluable insights, our stakeholders who trusted the process, and our leadership for creating an environment where innovation could flourish. Every contribution, large or small, shaped the final outcome. Great work emerges from great collaboration, and this project exemplified what's possible when diverse talents unite around a shared vision.
-                </p>
+                {/* Fallback if no CMS data */}
+                {!sectionsData && (
+                  <>
+                    <div className="mb-8">
+                      <p className="text-[15px] uppercase tracking-[0.12em] text-muted-foreground/60 mb-2 font-bold">Role</p>
+                      <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased">
+                        {project.role}
+                      </p>
+                    </div>
+                    <div className="mb-8">
+                      <p className="text-[15px] uppercase tracking-[0.12em] text-muted-foreground/60 mb-2 font-bold">Year</p>
+                      <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased">
+                        {project.year}
+                      </p>
+                    </div>
+                  </>
+                )}
               </motion.section>
 
               {/* Reaction Buttons */}

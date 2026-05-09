@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -76,6 +76,50 @@ export default function AddProject() {
   const [currentTag, setCurrentTag] = useState("");
   const [currentTech, setCurrentTech] = useState("");
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
+
+  // File upload states
+  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [isDraggingFeatured, setIsDraggingFeatured] = useState(false);
+  const [isDraggingGallery, setIsDraggingGallery] = useState(false);
+
+  // Refs for file inputs
+  const featuredImageInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const ogImageInputRef = useRef<HTMLInputElement>(null);
+
+  // File upload handlers
+  const handleFeaturedImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setFormData((prev) => ({ ...prev, featuredImage: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => setFeaturedImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+      if (imageFiles.length > 0) {
+        setFormData((prev) => ({ ...prev, gallery: [...prev.gallery, ...imageFiles] }));
+        imageFiles.forEach((file) => {
+          const reader = new FileReader();
+          reader.onloadend = () => setGalleryPreviews((prev) => [...prev, reader.result as string]);
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+  };
+
+  const handleOgImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setFormData((prev) => ({ ...prev, ogImage: file }));
+    }
+  };
 
   // Case study subsections with toggle states and content
   const [caseStudySections, setCaseStudySections] = useState([
@@ -235,8 +279,70 @@ export default function AddProject() {
 
   const handlePublish = () => {
     setIsSaving(true);
-    // In production, this would send data to backend
-    console.log("Publishing project:", { ...formData, contentBlocks });
+    
+    // Convert File objects to data URLs for localStorage
+    const processedFormData = { ...formData };
+    
+    // Convert featured image to data URL
+    if (featuredImagePreview) {
+      processedFormData.featuredImage = featuredImagePreview as any;
+    }
+    
+    // Convert gallery images to data URLs
+    if (galleryPreviews.length > 0) {
+      processedFormData.gallery = galleryPreviews as any;
+    }
+    
+    // Create project object
+    const newProject = {
+      id: formData.slug || Date.now().toString(),
+      title: formData.title,
+      description: formData.shortDescription,
+      fullDescription: formData.fullDescription,
+      tags: formData.tags,
+      category: formData.category,
+      sector: "UI-UX Design",
+      thumbnail: featuredImagePreview || "https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80",
+      logoOverlay: formData.featuredImage ? featuredImagePreview : undefined,
+      icon: "Layers",
+      year: formData.projectDate || new Date().getFullYear().toString(),
+      role: formData.clientName || "Designer",
+      context: caseStudySections.find(s => s.id === "01")?.text || formData.fullDescription,
+      research: caseStudySections.find(s => s.id === "03")?.text || "",
+      designSystem: caseStudySections.find(s => s.id === "04")?.text || "",
+      prototyping: caseStudySections.find(s => s.id === "05")?.text || "",
+      outcome: caseStudySections.find(s => s.id === "07")?.text || "",
+      images: galleryPreviews.map((url, idx) => ({
+        url: url,
+        caption: `Project image ${idx + 1}`
+      })),
+      caseStudySections: caseStudySections.filter(s => s.enabled),
+      techStack: formData.techStack,
+      status: formData.status,
+      isFeatured: formData.isFeatured,
+      showOnHomepage: formData.showOnHomepage,
+      priority: formData.priority,
+      themeColor: formData.themeColor,
+      contentBlocks
+    };
+    
+    // Get existing new projects from localStorage
+    const existingProjects = localStorage.getItem("cmsNewProjects");
+    const projectsList = existingProjects ? JSON.parse(existingProjects) : [];
+    
+    // Add or update project
+    const existingIndex = projectsList.findIndex((p: any) => p.id === newProject.id);
+    if (existingIndex >= 0) {
+      projectsList[existingIndex] = newProject;
+    } else {
+      projectsList.push(newProject);
+    }
+    
+    // Save to localStorage
+    localStorage.setItem("cmsNewProjects", JSON.stringify(projectsList));
+    
+    console.log("Publishing project:", newProject);
+    
     setTimeout(() => {
       setIsSaving(false);
       alert("Project published successfully!");
@@ -476,25 +582,151 @@ export default function AddProject() {
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium mb-2">Featured Image *</label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Drag and drop or click to upload
-                    </p>
-                    <p className="text-xs text-muted-foreground">Recommended: 1200x800px, JPG or PNG</p>
-                    <input type="file" className="hidden" accept="image/*" />
+                  <div
+                    onClick={() => featuredImageInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
+                      isDraggingFeatured ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    }`}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingFeatured(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingFeatured(false);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingFeatured(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file && file.type.startsWith("image/")) {
+                        setFormData((prev) => ({ ...prev, featuredImage: file }));
+                        const reader = new FileReader();
+                        reader.onloadend = () => setFeaturedImagePreview(reader.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  >
+                    {featuredImagePreview ? (
+                      <div className="relative">
+                        <img src={featuredImagePreview} alt="Featured" className="max-h-48 mx-auto rounded" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFeaturedImagePreview(null);
+                            setFormData((prev) => ({ ...prev, featuredImage: null }));
+                          }}
+                          className="absolute top-2 right-2 p-1 bg-destructive text-white rounded-full hover:bg-destructive/90"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : isDraggingFeatured ? (
+                      <p className="text-sm text-primary font-medium mb-2">Drop image here</p>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Drag and drop or click to upload
+                        </p>
+                        <p className="text-xs text-muted-foreground">Recommended: 1200x800px, JPG or PNG</p>
+                      </>
+                    )}
+                    <input 
+                      ref={featuredImageInputRef}
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleFeaturedImageChange}
+                    />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Project Gallery</label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Upload multiple images
-                    </p>
-                    <p className="text-xs text-muted-foreground">You can select multiple files at once</p>
-                    <input type="file" className="hidden" accept="image/*" multiple />
+                  <div
+                    onClick={() => galleryInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
+                      isDraggingGallery ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    }`}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingGallery(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingGallery(false);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDraggingGallery(false);
+                      const files = e.dataTransfer.files;
+                      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+                      if (imageFiles.length > 0) {
+                        setFormData((prev) => ({ ...prev, gallery: [...prev.gallery, ...imageFiles] }));
+                        imageFiles.forEach((file) => {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setGalleryPreviews((prev) => [...prev, reader.result as string]);
+                          reader.readAsDataURL(file);
+                        });
+                      }
+                    }}
+                  >
+                    {galleryPreviews.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {galleryPreviews.map((preview, idx) => (
+                          <div key={idx} className="relative aspect-square">
+                            <img src={preview} alt={`Gallery ${idx}`} className="w-full h-full object-cover rounded" />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGalleryPreviews((prev) => prev.filter((_, i) => i !== idx));
+                                setFormData((prev) => ({ 
+                                  ...prev, 
+                                  gallery: prev.gallery.filter((_, i) => i !== idx) 
+                                }));
+                              }}
+                              className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full hover:bg-destructive/90"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {isDraggingGallery ? (
+                      <p className="text-sm text-primary font-medium mb-2">Drop images here</p>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Upload multiple images
+                        </p>
+                        <p className="text-xs text-muted-foreground">You can select multiple files at once</p>
+                      </>
+                    )}
+                    <input 
+                      ref={galleryInputRef}
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*" 
+                      multiple
+                      onChange={handleGalleryChange}
+                    />
                   </div>
                 </div>
 
@@ -978,10 +1210,21 @@ export default function AddProject() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Open Graph Image</label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                  <div 
+                    onClick={() => ogImageInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                  >
                     <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">Recommended: 1200x630px</p>
-                    <input type="file" className="hidden" accept="image/*" />
+                    <p className="text-xs text-muted-foreground">
+                      {formData.ogImage ? formData.ogImage.name : 'Recommended: 1200x630px'}
+                    </p>
+                    <input 
+                      ref={ogImageInputRef}
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleOgImageChange}
+                    />
                   </div>
                 </div>
 

@@ -1,16 +1,89 @@
 import { BlogPost } from "../data/blog";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useState } from "react";
+import { useAdminView } from "../contexts/AdminViewContext";
+import { AdminActionMenu } from "./AdminActionMenu";
 
 interface BlogCardProps {
   post: BlogPost;
+  onUpdate?: () => void;
 }
 
-export function BlogCard({ post }: BlogCardProps) {
+export function BlogCard({ post, onUpdate }: BlogCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
+  const { isAdminView } = useAdminView();
+  const navigate = useNavigate();
+
+  const handleEdit = () => {
+    navigate(`/admin/dashboard/edit-blog/${post.slug}`);
+  };
+
+  const handleDuplicate = () => {
+    const newPost = {
+      ...post,
+      slug: `${post.slug}-copy-${Date.now()}`,
+      title: `${post.title} (Copy)`
+    };
+
+    const savedPosts = localStorage.getItem("cmsBlogPosts");
+    const postsList = savedPosts ? JSON.parse(savedPosts) : [];
+    postsList.push(newPost);
+    localStorage.setItem("cmsBlogPosts", JSON.stringify(postsList));
+
+    if (onUpdate) onUpdate();
+    alert(`"${post.title}" duplicated successfully!`);
+  };
+
+  const handleMoveTo = () => {
+    const categories = ['Design Leadership', 'Product Strategy', 'AI & Ethics', 'Systems Design', 'Case Studies', 'Process & Methods', 'Career Growth', 'Other'];
+    const currentCategory = post.category;
+    const otherCategories = categories.filter(c => c !== currentCategory);
+
+    const choice = prompt(
+      `Move "${post.title}" to:\n\nCurrent: ${currentCategory}\n\nEnter new category:\n${otherCategories.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nOr type a custom category:`
+    );
+
+    if (choice) {
+      const selectedCategory = isNaN(Number(choice))
+        ? choice
+        : otherCategories[Number(choice) - 1];
+
+      if (selectedCategory) {
+        const savedPosts = localStorage.getItem("cmsBlogData");
+        const blogData = savedPosts ? JSON.parse(savedPosts) : {};
+
+        blogData[post.slug] = {
+          ...blogData[post.slug],
+          category: selectedCategory
+        };
+
+        localStorage.setItem("cmsBlogData", JSON.stringify(blogData));
+        if (onUpdate) onUpdate();
+        alert(`"${post.title}" moved to "${selectedCategory}"!`);
+      }
+    }
+  };
+
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete "${post.title}"?\n\nThis action cannot be undone.`)) {
+      const deletedSlugs = localStorage.getItem("cmsDeletedBlogPosts");
+      const deletedSet = deletedSlugs ? new Set(JSON.parse(deletedSlugs)) : new Set();
+      deletedSet.add(post.slug);
+      localStorage.setItem("cmsDeletedBlogPosts", JSON.stringify([...deletedSet]));
+
+      const savedPosts = localStorage.getItem("cmsBlogPosts");
+      if (savedPosts) {
+        let posts = JSON.parse(savedPosts);
+        posts = posts.filter((p: any) => p.slug !== post.slug);
+        localStorage.setItem("cmsBlogPosts", JSON.stringify(posts));
+      }
+
+      if (onUpdate) onUpdate();
+    }
+  };
+
   // Assign pastel colors to tags based on tag name for consistency
   const getTagColorData = (tag: string) => {
     const colors: { [key: string]: { bg: string; text: string } } = {
@@ -52,18 +125,29 @@ export function BlogCard({ post }: BlogCardProps) {
   };
 
   return (
-    <motion.article 
+    <motion.article
       whileHover={{ y: -6 }}
       transition={{ duration: 0.5 }}
       className="group h-full"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link 
+      <Link
         to={`/blog/${post.slug}`}
         className="block h-full"
       >
-        <div className="h-[580px] flex flex-col bg-muted/30 rounded-2xl border-2 border-border hover:border-foreground transition-all duration-500 overflow-hidden">
+        <div className="h-[580px] flex flex-col bg-muted/30 rounded-2xl border-2 border-border hover:border-foreground transition-all duration-500 overflow-hidden relative">
+          {/* Admin Action Menu */}
+          {isAdminView && (
+            <AdminActionMenu
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onMoveTo={handleMoveTo}
+              onDelete={handleDelete}
+              itemType="blog"
+            />
+          )}
+
           {/* Image */}
           <div className="aspect-[16/9] flex-shrink-0 overflow-hidden bg-muted">
             <motion.img

@@ -1,28 +1,91 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import type { Project } from "../data/projects";
 import * as LucideIcons from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import React from "react";
+import { useAdminView } from "../contexts/AdminViewContext";
+import { AdminActionMenu } from "./AdminActionMenu";
+import { deleteProject } from "../data/projects";
 
 interface CaseStudyCardProps {
   project: Project;
   isFlipped?: boolean;
   onFlip?: () => void;
+  onUpdate?: () => void;
 }
 
-export function CaseStudyCard({ project, isFlipped = false, onFlip }: CaseStudyCardProps) {
+export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: CaseStudyCardProps) {
   const IconComponent = (LucideIcons as any)[project.icon] || LucideIcons.Box;
   const [isHovered, setIsHovered] = React.useState(false);
   const [isTouched, setIsTouched] = React.useState(false);
-  
+  const { isAdminView } = useAdminView();
+  const navigate = useNavigate();
+
   const handleTouchStart = () => {
     setIsTouched(true);
   };
-  
+
   const handleTouchEnd = () => {
     setIsTouched(false);
+  };
+
+  const handleEdit = () => {
+    navigate(`/admin/dashboard/edit-project/${project.id}`);
+  };
+
+  const handleDuplicate = () => {
+    const newProject = {
+      ...project,
+      id: `${project.id}-copy-${Date.now()}`,
+      title: `${project.title} (Copy)`
+    };
+
+    const newProjects = localStorage.getItem("cmsNewProjects");
+    const projectsList = newProjects ? JSON.parse(newProjects) : [];
+    projectsList.push(newProject);
+    localStorage.setItem("cmsNewProjects", JSON.stringify(projectsList));
+
+    if (onUpdate) onUpdate();
+    alert(`"${project.title}" duplicated successfully!`);
+  };
+
+  const handleMoveTo = () => {
+    const categories = ['AI & Machine Learning', 'Enterprise SaaS', 'Public Sector', 'Design Systems', 'E-commerce', 'Other'];
+    const currentCategory = project.category;
+    const otherCategories = categories.filter(c => c !== currentCategory);
+
+    const choice = prompt(
+      `Move "${project.title}" to:\n\nCurrent: ${currentCategory}\n\nEnter new category:\n${otherCategories.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nOr type a custom category:`
+    );
+
+    if (choice) {
+      const selectedCategory = isNaN(Number(choice))
+        ? choice
+        : otherCategories[Number(choice) - 1];
+
+      if (selectedCategory) {
+        const savedEdits = localStorage.getItem("cmsProjectsData");
+        const editsData = savedEdits ? JSON.parse(savedEdits) : {};
+
+        editsData[project.id] = {
+          ...editsData[project.id],
+          category: selectedCategory
+        };
+
+        localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
+        if (onUpdate) onUpdate();
+        alert(`"${project.title}" moved to "${selectedCategory}"!`);
+      }
+    }
+  };
+
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete "${project.title}"?\n\nThis action cannot be undone.`)) {
+      deleteProject(project.id);
+      if (onUpdate) onUpdate();
+    }
   };
   
   return (
@@ -42,9 +105,20 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip }: CaseStudyC
         to={`/work/${project.id}`}
         className="block relative h-full flex flex-col"
       >
+        {/* Admin Action Menu */}
+        {isAdminView && (
+          <AdminActionMenu
+            onEdit={handleEdit}
+            onDuplicate={handleDuplicate}
+            onMoveTo={handleMoveTo}
+            onDelete={handleDelete}
+            itemType="project"
+          />
+        )}
+
         {/* Thumbnail */}
-        <motion.div 
-          transition={{ 
+        <motion.div
+          transition={{
             duration: 0.5,
             ease: [0.25, 0.1, 0.25, 1.0]
           }}

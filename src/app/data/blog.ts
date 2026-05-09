@@ -8,6 +8,18 @@ export interface BlogPost {
   category: string;
   slug: string;
   image: string;
+  content?: ContentBlock[]; // Advanced content blocks
+}
+
+export interface ContentBlock {
+  id: string;
+  type: 'text' | 'heading' | 'image' | 'audio' | 'video';
+  content: string;
+  metadata?: {
+    level?: number; // For headings (h2, h3, h4)
+    caption?: string; // For images/audio/video
+    alt?: string; // For images
+  };
 }
 
 export const blogPosts: BlogPost[] = [
@@ -319,4 +331,43 @@ export function getAllBlogCategories(): string[] {
     return indexA - indexB;
   });
   return sortedCategories;
+}
+
+// Function to get merged blog posts (original + CMS edits)
+export function getMergedBlogPosts(): BlogPost[] {
+  try {
+    const savedPosts = localStorage.getItem("cmsBlogPosts");
+    const deletedSlugs = localStorage.getItem("cmsDeletedBlogPosts");
+    const deletedSet = deletedSlugs ? new Set(JSON.parse(deletedSlugs)) : new Set();
+    
+    if (!savedPosts) {
+      // Filter out deleted posts
+      return blogPosts.filter(post => !deletedSet.has(post.slug));
+    }
+
+    const cmsPosts: BlogPost[] = JSON.parse(savedPosts);
+    
+    // Merge CMS edits with original posts and filter out deleted posts
+    return blogPosts
+      .filter(post => !deletedSet.has(post.slug))
+      .map(originalPost => {
+        const cmsPost = cmsPosts.find(p => p.slug === originalPost.slug);
+        return cmsPost || originalPost;
+      });
+  } catch (error) {
+    console.error("Error loading CMS blog posts:", error);
+    return blogPosts;
+  }
+}
+
+// Function to get a single blog post by slug (with CMS edits applied)
+export function getBlogBySlug(slug: string): BlogPost | undefined {
+  const mergedPosts = getMergedBlogPosts();
+  return mergedPosts.find(post => post.slug === slug);
+}
+
+// Function to get a single blog post by id (with CMS edits applied)
+export function getBlogById(id: string): BlogPost | undefined {
+  const mergedPosts = getMergedBlogPosts();
+  return mergedPosts.find(post => post.id === id);
 }

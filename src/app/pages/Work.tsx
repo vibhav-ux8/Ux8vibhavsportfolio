@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { CaseStudyCard } from "../components/CaseStudyCard";
-import { projects, getAllCategories, getAllSectors } from "../data/projects";
+import { getMergedProjects, getAllCategories, getAllSectors } from "../data/projects";
 import { motion } from "motion/react";
+import { useAdminView } from "../contexts/AdminViewContext";
+import { useNavigate } from "react-router";
+import { Plus } from "lucide-react";
 
 export default function Work() {
+  const { isAdminView } = useAdminView();
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState(getMergedProjects());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
@@ -13,7 +19,16 @@ export default function Work() {
   const allCategories = getAllCategories();
   const allSectors = getAllSectors();
   const projectsPerPage = 15;
-  
+
+  // Reload projects when component mounts to get latest edits
+  useEffect(() => {
+    setProjects(getMergedProjects());
+  }, []);
+
+  const handleUpdate = () => {
+    setProjects(getMergedProjects());
+  };
+
   console.log('Categories:', allCategories);
   console.log('Sectors:', allSectors);
 
@@ -171,11 +186,12 @@ export default function Work() {
           {/* Project Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentProjects.map((project) => (
-              <CaseStudyCard 
-                key={project.id} 
-                project={project} 
-                onFlip={handleFlip} 
-                isFlipped={flippedCardId === project.id} 
+              <CaseStudyCard
+                key={project.id}
+                project={project}
+                onFlip={handleFlip}
+                isFlipped={flippedCardId === project.id}
+                onUpdate={handleUpdate}
               />
             ))}
           </div>
@@ -234,6 +250,25 @@ export default function Work() {
           )}
         </div>
       </section>
+
+      {/* New Project Button - Admin Only */}
+      {isAdminView && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate("/admin/dashboard/add-project")}
+          className="fixed bottom-8 right-8 z-50 bg-foreground text-background rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all flex items-center gap-3 group"
+          title="Create New Project"
+        >
+          <Plus className="w-6 h-6" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-medium">
+            New Project
+          </span>
+        </motion.button>
+      )}
 
       <Footer />
     </div>

@@ -1,0 +1,66 @@
+import { Navigation } from "../components/Navigation";
+import { Footer } from "../components/Footer";
+import { motion } from "motion/react";
+import { Mail, Linkedin, Send, Users, Target, Lightbulb, TrendingUp, Award, ArrowRight, Clock, Network, BarChart3, Zap } from "lucide-react";
+import { Link } from "react-router";
+import { useState, useEffect } from "react";
+import logoImage from "../../imports/UX8_Logo_2.svg";
+import ux8IconSvg from "../../imports/UX8_icon.svg";
+import dharmicFuturesIcon from "figma:asset/3814864fe79b8dfaf3cac21e9286d36e89b8d371.png";
+import srujanalayaIcon from "figma:asset/b923f899c2bae651111cebc7798a8737cf209542.png";
+
+export default function Home() {
+  // Load CMS data from localStorage
+  const [cmsData, setCmsData] = useState<any>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("cmsHomeData");
+    if (saved) {
+      setCmsData(JSON.parse(saved));
+    }
+  }, []);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form submitted:", formData);
+    setSubmitted(true);
+    setTimeout(() => {
+      setSubmitted(false);
+      setFormData({ name: "", email: "", message: "" });
+    }, 3000);
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <div className="pt-24 px-6 text-center">
+        <h1 className="text-4xl font-bold">Home Page</h1>
+        <p className="text-muted-foreground mt-4">
+          Edit this page through the Admin Dashboard → Home Tab
+        </p>
+        {cmsData && (
+          <div className="mt-8">
+            <p>CMS Data Loaded: {JSON.stringify(cmsData).substring(0, 100)}...</p>
+          </div>
+        )}
+      </div>
+      <Footer />
+    </div>
+  );
+}

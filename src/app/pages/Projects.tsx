@@ -1,16 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { CaseStudyCard } from "../components/CaseStudyCard";
-import { projects, getAllTags } from "../data/projects";
+import { getMergedProjects, getAllTags } from "../data/projects";
 import { motion } from "motion/react";
 
 export default function Projects() {
+  const [projects, setProjects] = useState(getMergedProjects());
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
   const projectsPerPage = 15;
   const allTags = getAllTags();
+
+  // Reload projects when component mounts to get latest edits
+  useEffect(() => {
+    setProjects(getMergedProjects());
+  }, []);
+
+  const handleUpdate = () => {
+    setProjects(getMergedProjects());
+  };
 
   const filteredProjects = selectedTag
     ? projects.filter(p => p.tags.includes(selectedTag))
@@ -125,7 +135,7 @@ export default function Projects() {
           </motion.div>
 
           {/* Project Grid */}
-          <motion.div 
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
@@ -138,7 +148,7 @@ export default function Projects() {
                 variants={fadeInUp}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <CaseStudyCard project={project} onFlip={handleFlip} isFlipped={flippedCardId === project.id} />
+                <CaseStudyCard project={project} onFlip={handleFlip} isFlipped={flippedCardId === project.id} onUpdate={handleUpdate} />
               </motion.div>
             ))}
           </motion.div>

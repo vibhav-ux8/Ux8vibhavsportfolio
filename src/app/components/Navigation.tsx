@@ -1,12 +1,25 @@
 import { Link, useLocation } from "react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Eye, EyeOff } from "lucide-react";
 import { House, UserCircle, Briefcase, PenNib, EnvelopeSimple } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import logoImage from "figma:asset/d817f10c5a8dcea24cbac0c933d18bd131f71370.png";
+import { useAdminView } from "../contexts/AdminViewContext";
 
 export function Navigation() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { isAdminView, toggleAdminView } = useAdminView();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check login status
+  useEffect(() => {
+    const checkLoginStatus = () => {
+      setIsLoggedIn(localStorage.getItem("isAdminLoggedIn") === "true");
+    };
+    checkLoginStatus();
+    window.addEventListener('storage', checkLoginStatus);
+    return () => window.removeEventListener('storage', checkLoginStatus);
+  }, []);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -51,8 +64,8 @@ export function Navigation() {
                 }`}
               >
                 <div className={`transition-all duration-300 ${
-                  isActive(link.path) 
-                    ? "text-primary scale-110" 
+                  isActive(link.path)
+                    ? "text-primary scale-110"
                     : "text-muted-foreground/60 group-hover:text-foreground group-hover:scale-105"
                 }`}>
                   <link.Icon size={20} weight="thin" />
@@ -64,6 +77,24 @@ export function Navigation() {
                 </span>
               </Link>
             ))}
+
+            {/* Admin View Toggle */}
+            {isLoggedIn && (
+              <button
+                onClick={toggleAdminView}
+                className={`flex flex-col items-center gap-1.5 transition-all duration-300 group ${
+                  isAdminView ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={isAdminView ? "Switch to Public View" : "Switch to Admin View"}
+              >
+                <div className="transition-all duration-300 group-hover:scale-105">
+                  {isAdminView ? <Eye size={20} /> : <EyeOff size={20} />}
+                </div>
+                <span className="text-[13px] tracking-[0.01em] transition-all duration-300 font-normal">
+                  {isAdminView ? "Admin" : "Public"}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -97,6 +128,24 @@ export function Navigation() {
                   <span>{link.label}</span>
                 </Link>
               ))}
+
+              {/* Admin View Toggle (Mobile) */}
+              {isLoggedIn && (
+                <button
+                  onClick={() => {
+                    toggleAdminView();
+                    setIsOpen(false);
+                  }}
+                  className={`flex items-center gap-3 text-base transition-colors ${
+                    isAdminView ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  <div className={isAdminView ? "text-primary" : "text-muted-foreground/70"}>
+                    {isAdminView ? <Eye size={24} /> : <EyeOff size={24} />}
+                  </div>
+                  <span>{isAdminView ? "Admin View" : "Public View"}</span>
+                </button>
+              )}
             </div>
           </div>
         )}

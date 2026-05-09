@@ -2,20 +2,113 @@ import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { motion } from "motion/react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Hammer, Eye, Sparkles } from "lucide-react";
-import { useState, useEffect } from "react";
-import profileImage from "figma:asset/1804ff83437d465d1844d7bdefee7249fb9aa493.png";
+import { Hammer, Eye, Sparkles, Save, Edit3 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import profileImage from "figma:asset/387f05774b0379ac3bcd3ec623e79ea372c35421.png";
+import { useAdminView } from "../contexts/AdminViewContext";
 
 export default function About() {
+  const { isAdminView } = useAdminView();
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Default data structure
+  const defaultData = {
+    hero: {
+      name: "Vibhav Kamat",
+      lead: "I have always been curious about the relationship between humans, technology, the times and environments we live in.",
+      journey: "My journey in design has been shaped by observing how people interact with systems—social, cultural, and technological.",
+      location: "Goa, India",
+      education1: "M.Des (New Media)",
+      education1Sub: "National Institute of Design, Gujarat",
+      education2: "B.F.A (Applied Art)",
+      education2Sub: "Goa College of Art, Goa",
+      focus: "AI Systems, Governance, Nation Building"
+    },
+    biography: {
+      background1: "I graduated from Goa College of Art, where I studied Applied Art and Audio-Visual Communication, and later continued my Master's journey with the National Institute of Design (NID) as part of the New Media Design program. These experiences helped me explore design not merely as visual expression, but as a way of understanding complex relations and interactions between people, technology, policy, economy and culture.",
+      background2: "Growing up in Antruz Mahal in Goa, a region deeply rooted in cultural traditions and the temple ecosystem, gave me a unique exposure to an integral and rhythmic community life, social networks and profound meanings. Observing everyday life in such a culturally rich environment cultivated a deep curiosity about nature, ancestral wisdom, human behavior, and the philosophy of technology.",
+      practice1: "Over the years, my work has taken me into the technology sector across critical domains related to nation-building and security. Working with law enforcement agencies, governance systems, and intelligence contexts, I have been involved in designing AI and machine-learning driven tools for high-pressure environments, where decisions carry real-world consequences.",
+      practice2: "These experiences shaped my perspective on technology, not just as innovation, but as responsibility. Designing for such contexts requires clarity, resilience, and a deep understanding of how emerging exponential technologies affect people and institutions.",
+      pullQuote: "My interest lies in building ideas and systems that matter over the long duration, tools and experiences that contribute meaningfully to society, governance, collective progress and prosperity.",
+      closing: "With the impact of AI tools, the domain of design has evolved from research, synthesis, ideation, prototyping and more to direct building, observation and refinement, whereas only some fundamental aspects of human realities remain constant."
+    },
+    designApproach: {
+      heading: "Creating scalable solutions through strategic thinking, collaborative leadership, and inclusive design practices.",
+      principle1Title: "Strategic Systems Thinking",
+      principle1Desc: "I design at the intersection of user needs, business goals, and technical constraints—creating scalable solutions that serve diverse stakeholders across complex organizations.",
+      principle2Title: "Cross-Functional Leadership",
+      principle2Desc: "Leading design across product, engineering, and executive teams—driving alignment through clear communication, collaborative workshops, and data-informed decision making.",
+      principle3Title: "Inclusive by Design",
+      principle3Desc: "Championing accessibility and inclusive design practices—ensuring that digital products serve everyone, especially underserved and vulnerable populations."
+    }
+  };
+
   // Load CMS data from localStorage
-  const [cmsData, setCmsData] = useState<any>(null);
+  const [cmsData, setCmsData] = useState<any>(defaultData);
 
   useEffect(() => {
     const saved = localStorage.getItem("cmsAboutData");
     if (saved) {
-      setCmsData(JSON.parse(saved));
+      try {
+        const savedData = JSON.parse(saved);
+        // Deep merge with defaults
+        const mergedData = {
+          hero: { ...defaultData.hero, ...savedData.hero },
+          biography: { ...defaultData.biography, ...savedData.biography },
+          designApproach: { ...defaultData.designApproach, ...savedData.designApproach }
+        };
+        setCmsData(mergedData);
+      } catch (e) {
+        console.error("Error loading About CMS data:", e);
+        setCmsData(defaultData);
+      }
     }
   }, []);
+
+  const handleContentEdit = (path: string, value: string) => {
+    setHasChanges(true);
+    const keys = path.split('.');
+    const newData = { ...cmsData };
+    let current: any = newData;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) current[keys[i]] = {};
+      current = current[keys[i]];
+    }
+    current[keys[keys.length - 1]] = value;
+
+    setCmsData(newData);
+  };
+
+  const handleSave = () => {
+    localStorage.setItem("cmsAboutData", JSON.stringify(cmsData));
+    setHasChanges(false);
+    console.log("Saved About CMS Data:", cmsData);
+    alert("About page updated successfully!");
+  };
+
+  // Editable component for inline editing
+  const Editable = ({ path, className = "", as = "span" }: { path: string; className?: string; as?: string }) => {
+    const keys = path.split('.');
+    let value: any = cmsData;
+    for (const key of keys) {
+      value = value?.[key];
+    }
+
+    if (!isAdminView) {
+      return as === "p" || as === "div" ?
+        React.createElement(as, { className }, value || "") :
+        <span className={className}>{value || ""}</span>;
+    }
+
+    return React.createElement(as, {
+      contentEditable: true,
+      suppressContentEditableWarning: true,
+      onBlur: (e: any) => handleContentEdit(path, e.target.textContent),
+      className: `${className} ${isAdminView ? 'outline-2 outline-dashed outline-yellow-400/50 hover:outline-yellow-400 focus:outline-yellow-500 rounded px-2 -mx-2 transition-all' : ''}`,
+      dangerouslySetInnerHTML: { __html: value || "" }
+    });
+  };
   const skills = [
     "Enterprise UX",
     "Complex Systems Design",
@@ -109,20 +202,20 @@ export default function About() {
               >
                 <div className="flex items-baseline gap-3">
                   <span className="text-muted-foreground font-medium min-w-[100px]">Location</span>
-                  <span className="text-foreground">Goa, India</span>
+                  <span className="text-foreground"><Editable path="hero.location" /></span>
                 </div>
                 <div className="flex items-baseline gap-3">
                   <span className="text-muted-foreground font-medium min-w-[100px]">Education</span>
                   <div className="text-foreground">
-                    <div>M.Des (New Media)</div>
-                    <div className="text-muted-foreground text-[14px] mt-1">National Institute of Design, Gujarat</div>
-                    <div className="mt-3">B.F.A (Applied Art)</div>
-                    <div className="text-muted-foreground text-[14px] mt-1">Goa College of Art, Goa</div>
+                    <div><Editable path="hero.education1" /></div>
+                    <div className="text-muted-foreground text-[14px] mt-1"><Editable path="hero.education1Sub" /></div>
+                    <div className="mt-3"><Editable path="hero.education2" /></div>
+                    <div className="text-muted-foreground text-[14px] mt-1"><Editable path="hero.education2Sub" /></div>
                   </div>
                 </div>
                 <div className="flex items-baseline gap-3">
                   <span className="text-muted-foreground font-medium min-w-[100px]">Focus</span>
-                  <span className="text-foreground">AI Systems, Governance,<br/>Nation Building</span>
+                  <span className="text-foreground"><Editable path="hero.focus" /></span>
                 </div>
               </motion.div>
             </motion.div>
@@ -146,33 +239,28 @@ export default function About() {
                 
                 {/* Name */}
                 <h1 className="text-[56px] md:text-[72px] lg:text-[88px] font-medium mb-6 tracking-[-0.03em] leading-[0.95]" style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}>
-                  {cmsData?.hero?.name || "Vibhav Kamat"}
+                  <Editable path="hero.name" />
                 </h1>
 
-                <p className="text-[19px] md:text-[21px] text-muted-foreground max-w-4xl leading-[1.6] tracking-[-0.011em]">
-                  {cmsData?.hero?.lead || "I have always been curious about the relationship between humans, technology, the times and environments we live in."}
-                </p>
+                <div className="text-[19px] md:text-[21px] text-muted-foreground max-w-4xl leading-[1.6] tracking-[-0.011em]">
+                  <Editable path="hero.lead" as="p" className="text-[19px] md:text-[21px] text-muted-foreground max-w-4xl leading-[1.6] tracking-[-0.011em]" />
+                </div>
 
                 <div className="w-12 h-[1px] bg-foreground/20" />
 
-                <p className="text-[17px] sm:text-[18px] md:text-[19px] font-[400] leading-[1.7] sm:leading-[1.75] tracking-[-0.012em] sm:tracking-[-0.013em] text-muted-foreground">
-                  {cmsData?.hero?.journey || "My journey in design has been shaped by observing how people interact with systems—social, cultural, and technological."}
-                </p>
+                <div className="text-[17px] sm:text-[18px] md:text-[19px] font-[400] leading-[1.7] sm:leading-[1.75] tracking-[-0.012em] sm:tracking-[-0.013em] text-muted-foreground">
+                  <Editable path="hero.journey" as="p" className="text-[17px] sm:text-[18px] md:text-[19px] font-[400] leading-[1.7] sm:leading-[1.75] tracking-[-0.012em] sm:tracking-[-0.013em] text-muted-foreground" />
+                </div>
               </div>
 
               {/* Bio Sections */}
               <div className="space-y-10 sm:space-y-12 pt-4 sm:pt-8">
                 <div className="space-y-6 sm:space-y-8">
                   <h3 className="text-[11px] tracking-[0.12em] uppercase text-muted-foreground font-medium">Background</h3>
-                  
-                  <div className="space-y-5 sm:space-y-6 text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75">
-                    <p>
-                      {cmsData?.biography?.background1 || "I graduated from Goa College of Art, where I studied Applied Art and Audio-Visual Communication, and later continued my Master's journey with the National Institute of Design (NID) as part of the New Media Design program. These experiences helped me explore design not merely as visual expression, but as a way of understanding complex relations and interactions between people, technology, policy, economy and culture."}
-                    </p>
 
-                    <p>
-                      {cmsData?.biography?.background2 || "Growing up in Antruz Mahal in Goa, a region deeply rooted in cultural traditions and the temple ecosystem, gave me a unique exposure to an integral and rhythmic community life, social networks and profound meanings. Observing everyday life in such a culturally rich environment cultivated a deep curiosity about nature, ancestral wisdom, human behavior, and the philosophy of technology."}
-                    </p>
+                  <div className="space-y-5 sm:space-y-6 text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75">
+                    <Editable path="biography.background1" as="p" className="text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75" />
+                    <Editable path="biography.background2" as="p" className="text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75" />
                   </div>
                 </div>
 
@@ -180,13 +268,8 @@ export default function About() {
                   <h3 className="text-[11px] tracking-[0.12em] uppercase text-muted-foreground font-medium">Practice</h3>
 
                   <div className="space-y-5 sm:space-y-6 text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75">
-                    <p>
-                      {cmsData?.biography?.practice1 || "Over the years, my work has taken me into the technology sector across critical domains related to nation-building and security. Working with law enforcement agencies, governance systems, and intelligence contexts, I have been involved in designing AI and machine-learning driven tools for high-pressure environments, where decisions carry real-world consequences."}
-                    </p>
-                    
-                    <p>
-                      These experiences shaped my perspective on technology, not just as innovation, but as responsibility. Designing for such contexts requires clarity, resilience, and a deep understanding of how emerging exponential technologies affect people and institutions.
-                    </p>
+                    <Editable path="biography.practice1" as="p" className="text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75" />
+                    <Editable path="biography.practice2" as="p" className="text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75" />
                   </div>
                 </div>
 
@@ -198,15 +281,11 @@ export default function About() {
                   transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   className="py-10 sm:py-12 pl-6 sm:pl-8 border-l-[2px] border-foreground/90"
                 >
-                  <p className="text-[20px] sm:text-[22px] md:text-[24px] lg:text-[26px] font-[350] leading-[1.4] sm:leading-[1.45] tracking-[-0.017em] sm:tracking-[-0.018em] text-foreground/95 italic">
-                    My interest lies in building ideas and systems that matter over the long duration, tools and experiences that contribute meaningfully to society, governance, collective progress and prosperity.
-                  </p>
+                  <Editable path="biography.pullQuote" as="p" className="text-[20px] sm:text-[22px] md:text-[24px] lg:text-[26px] font-[350] leading-[1.4] sm:leading-[1.45] tracking-[-0.017em] sm:tracking-[-0.018em] text-foreground/95 italic" />
                 </motion.div>
 
                 <div className="space-y-5 sm:space-y-6 text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75 pt-2 sm:pt-4">
-                  <p>
-                    With the impact of AI tools, the domain of design has evolved from research, synthesis, ideation, prototyping and more to direct building, observation and refinement, whereas only some fundamental aspects of human realities remain constant.
-                  </p>
+                  <Editable path="biography.closing" as="p" className="text-[16px] sm:text-[17px] leading-[1.72] sm:leading-[1.8] tracking-[-0.012em] sm:tracking-[-0.013em] text-foreground/75" />
                 </div>
               </div>
             </motion.div>
@@ -238,9 +317,7 @@ export default function About() {
                 </h2>
                 <div className="flex-1 h-[1px] bg-border" />
               </div>
-              <p className="text-[22px] sm:text-[28px] md:text-[32px] lg:text-[36px] font-[300] leading-[1.35] sm:leading-[1.3] tracking-[-0.023em] sm:tracking-[-0.022em] text-foreground/90">
-                Creating scalable solutions through strategic thinking, collaborative leadership, and inclusive design practices.
-              </p>
+              <Editable path="designApproach.heading" as="p" className="text-[22px] sm:text-[28px] md:text-[32px] lg:text-[36px] font-[300] leading-[1.35] sm:leading-[1.3] tracking-[-0.023em] sm:tracking-[-0.022em] text-foreground/90" />
             </motion.div>
 
             {/* Principles Grid */}
@@ -248,8 +325,8 @@ export default function About() {
               variants={staggerContainer}
               className="grid grid-cols-1 lg:grid-cols-3 gap-12 sm:gap-16 lg:gap-20"
             >
-              <motion.div 
-                variants={fadeInUp} 
+              <motion.div
+                variants={fadeInUp}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                 className="group"
               >
@@ -259,16 +336,14 @@ export default function About() {
                     <div className="flex-1 h-[1px] bg-border group-hover:bg-foreground/20 transition-colors duration-500" />
                   </div>
                   <h3 className="text-[20px] sm:text-[22px] font-[450] tracking-[-0.017em] sm:tracking-[-0.018em] leading-[1.28] sm:leading-[1.3] text-foreground" style={{ fontFeatureSettings: "'ss01' on" }}>
-                    Strategic Systems Thinking
+                    <Editable path="designApproach.principle1Title" />
                   </h3>
-                  <p className="text-[15px] sm:text-[16px] leading-[1.7] sm:leading-[1.75] tracking-[-0.010em] sm:tracking-[-0.011em] text-foreground/65">
-                    I design at the intersection of user needs, business goals, and technical constraints—creating scalable solutions that serve diverse stakeholders across complex organizations.
-                  </p>
+                  <Editable path="designApproach.principle1Desc" as="p" className="text-[15px] sm:text-[16px] leading-[1.7] sm:leading-[1.75] tracking-[-0.010em] sm:tracking-[-0.011em] text-foreground/65" />
                 </div>
               </motion.div>
 
-              <motion.div 
-                variants={fadeInUp} 
+              <motion.div
+                variants={fadeInUp}
                 transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                 className="group"
               >
@@ -278,16 +353,14 @@ export default function About() {
                     <div className="flex-1 h-[1px] bg-border group-hover:bg-foreground/20 transition-colors duration-500" />
                   </div>
                   <h3 className="text-[20px] sm:text-[22px] font-[450] tracking-[-0.017em] sm:tracking-[-0.018em] leading-[1.28] sm:leading-[1.3] text-foreground" style={{ fontFeatureSettings: "'ss01' on" }}>
-                    Cross-Functional Leadership
+                    <Editable path="designApproach.principle2Title" />
                   </h3>
-                  <p className="text-[15px] sm:text-[16px] leading-[1.7] sm:leading-[1.75] tracking-[-0.010em] sm:tracking-[-0.011em] text-foreground/65">
-                    Leading design across product, engineering, and executive teams—driving alignment through clear communication, collaborative workshops, and data-informed decision making.
-                  </p>
+                  <Editable path="designApproach.principle2Desc" as="p" className="text-[15px] sm:text-[16px] leading-[1.7] sm:leading-[1.75] tracking-[-0.010em] sm:tracking-[-0.011em] text-foreground/65" />
                 </div>
               </motion.div>
 
-              <motion.div 
-                variants={fadeInUp} 
+              <motion.div
+                variants={fadeInUp}
                 transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="group"
               >
@@ -297,11 +370,9 @@ export default function About() {
                     <div className="flex-1 h-[1px] bg-border group-hover:bg-foreground/20 transition-colors duration-500" />
                   </div>
                   <h3 className="text-[20px] sm:text-[22px] font-[450] tracking-[-0.017em] sm:tracking-[-0.018em] leading-[1.28] sm:leading-[1.3] text-foreground" style={{ fontFeatureSettings: "'ss01' on" }}>
-                    Inclusive by Design
+                    <Editable path="designApproach.principle3Title" />
                   </h3>
-                  <p className="text-[15px] sm:text-[16px] leading-[1.7] sm:leading-[1.75] tracking-[-0.010em] sm:tracking-[-0.011em] text-foreground/65">
-                    Championing accessibility and inclusive design practices—ensuring that digital products serve everyone, especially underserved and vulnerable populations.
-                  </p>
+                  <Editable path="designApproach.principle3Desc" as="p" className="text-[15px] sm:text-[16px] leading-[1.7] sm:leading-[1.75] tracking-[-0.010em] sm:tracking-[-0.011em] text-foreground/65" />
                 </div>
               </motion.div>
             </motion.div>
@@ -705,6 +776,40 @@ export default function About() {
           </motion.div>
         </div>
       </section>
+
+      {/* Admin Edit Indicator */}
+      {isAdminView && (
+        <div className="fixed top-24 right-6 z-50 bg-yellow-400 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
+          <Edit3 size={16} />
+          <span className="text-sm font-medium">Click text to edit</span>
+        </div>
+      )}
+
+      {/* Update Button - Fixed at Bottom in Admin View */}
+      {isAdminView && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className={`px-8 py-4 rounded-full font-medium flex items-center gap-3 shadow-2xl transition-all ${
+              hasChanges
+                ? "bg-green-600 text-white hover:bg-green-700"
+                : "bg-gray-400 text-gray-100 cursor-not-allowed"
+            }`}
+          >
+            <Save size={20} />
+            <span className="text-lg font-semibold">
+              {hasChanges ? "Update About Page" : "No Changes"}
+            </span>
+          </motion.button>
+        </motion.div>
+      )}
 
       <Footer />
     </div>

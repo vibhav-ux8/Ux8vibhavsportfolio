@@ -2,17 +2,26 @@ import { useState } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { BlogCard } from "../components/BlogCard";
-import { blogPosts, getAllBlogCategories } from "../data/blog";
+import { getMergedBlogPosts, getAllBlogCategories } from "../data/blog";
 import { motion } from "motion/react";
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Plus } from "lucide-react";
+import { useAdminView } from "../contexts/AdminViewContext";
+import { useNavigate } from "react-router";
 
 export default function Blog() {
+  const { isAdminView } = useAdminView();
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTimeline, setSelectedTimeline] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set(["2026", "2025"]));
+  const [blogPosts, setBlogPosts] = useState(getMergedBlogPosts());
   const postsPerPage = 15;
   const allCategories = getAllBlogCategories();
+
+  const handleUpdate = () => {
+    setBlogPosts(getMergedBlogPosts());
+  };
 
   // Extract unique years and months from blog posts
   const getTimeline = () => {
@@ -330,7 +339,7 @@ export default function Blog() {
                     variants={fadeInUp}
                     transition={{ duration: 0.5, delay: index * 0.05 }}
                   >
-                    <BlogCard post={post} />
+                    <BlogCard post={post} onUpdate={handleUpdate} />
                   </motion.div>
                 ))}
               </motion.div>
@@ -392,6 +401,25 @@ export default function Blog() {
           </div>
         </div>
       </section>
+
+      {/* New Post Button - Admin Only */}
+      {isAdminView && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate("/admin/blog/new")}
+          className="fixed bottom-8 right-8 z-50 bg-foreground text-background rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all flex items-center gap-3 group"
+          title="Create New Post"
+        >
+          <Plus className="w-6 h-6" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-medium">
+            New Post
+          </span>
+        </motion.button>
+      )}
 
       <Footer />
     </div>

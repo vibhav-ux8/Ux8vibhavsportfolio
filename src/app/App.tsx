@@ -10,6 +10,10 @@ import BlogPost from "./pages/BlogPost";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AddProject from "./pages/AddProject";
+import EditProject from "./pages/EditProject";
+import EditBlogPost from "./pages/EditBlogPost";
+import NewBlogPost from "./pages/NewBlogPost";
+import { AdminViewProvider } from "./contexts/AdminViewContext";
 
 const NotFound = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -26,20 +30,25 @@ const NotFound = () => (
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/work" element={<Work />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/work/:id" element={<CaseStudy />} />
-        <Route path="/blog/:slug" element={<BlogPost />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/dashboard/add-project" element={<AddProject />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AdminViewProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/work" element={<Work />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/work/:id" element={<CaseStudy />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard/add-project" element={<AddProject />} />
+          <Route path="/admin/dashboard/edit-project/:id" element={<EditProject />} />
+          <Route path="/admin/dashboard/edit-blog/:slug" element={<EditBlogPost />} />
+          <Route path="/admin/blog/new" element={<NewBlogPost />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AdminViewProvider>
     </BrowserRouter>
   );
 }

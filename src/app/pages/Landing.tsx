@@ -1,21 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { Hero } from "../components/Hero";
 import { CaseStudyCard } from "../components/CaseStudyCard";
 import { BlogCard } from "../components/BlogCard";
-import { projects, getAllTags } from "../data/projects";
-import { blogPosts, getAllBlogTags } from "../data/blog";
+import { getMergedProjects, getAllTags } from "../data/projects";
+import { getMergedBlogPosts, getAllBlogTags } from "../data/blog";
 import { Mail, Linkedin, Send } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function Landing() {
+  const [projects, setProjects] = useState(getMergedProjects());
+  const [blogPosts, setBlogPosts] = useState(getMergedBlogPosts());
+
   // Work section state
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
   const projectsPerPage = 9;
   const allTags = getAllTags();
+
+  // Reload projects when component mounts
+  useEffect(() => {
+    setProjects(getMergedProjects());
+    setBlogPosts(getMergedBlogPosts());
+  }, []);
+
+  const handleUpdate = () => {
+    setProjects(getMergedProjects());
+  };
+
+  const handleBlogUpdate = () => {
+    setBlogPosts(getMergedBlogPosts());
+  };
 
   // Blog section state
   const [selectedBlogTag, setSelectedBlogTag] = useState<string | null>(null);
@@ -196,7 +213,7 @@ export default function Landing() {
                 variants={fadeInUp}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <CaseStudyCard project={project} onFlip={handleFlip} isFlipped={flippedCardId === project.id} />
+                <CaseStudyCard project={project} onFlip={handleFlip} isFlipped={flippedCardId === project.id} onUpdate={handleUpdate} />
               </motion.div>
             ))}
           </motion.div>
@@ -335,7 +352,7 @@ export default function Landing() {
                 variants={fadeInUp}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <BlogCard post={post} />
+                <BlogCard post={post} onUpdate={handleBlogUpdate} />
               </motion.div>
             ))}
           </motion.div>

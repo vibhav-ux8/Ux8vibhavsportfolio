@@ -3,7 +3,7 @@ import { Footer } from "../components/Footer";
 import { motion } from "motion/react";
 import { Mail, Linkedin, Send, Users, Target, Lightbulb, TrendingUp, Award, Sparkles, ArrowRight, Building2, Globe, Palette, Clock, Network, BarChart3, Zap, Save, Edit3 } from "lucide-react";
 import { Link } from "react-router";
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import logoImage from "../../imports/UX8_Logo_2.svg";
 import ux8IconSvg from "../../imports/UX8_icon.svg";
 import dharmicFuturesIcon from "figma:asset/3814864fe79b8dfaf3cac21e9286d36e89b8d371.png";
@@ -25,144 +25,81 @@ export default function Home() {
     approach: {
       heading: "Design is the bridge between complex problems and elegant solutions that scale",
       subheading: "I transform organizational challenges into intuitive experiences through strategic systems thinking, rigorous research, and human-centered design.",
-      processTitle: "Quick Design Process",
-      processSubtitle: "A rigorous, iterative approach balancing user needs with business objectives"
+      processHeading: "Quick Design Process",
+      processSubheading: "A rigorous, iterative approach balancing user needs with business objectives"
     },
     organizations: {
       heading: "Impact Beyond Design",
       subheading: "Contributing to organizations and initiatives that shape the future of design, culture, and technology",
-      ux8Description: "Fostering design excellence and innovation through community-driven initiatives and collaborative learning experiences.",
-      dharmicDescription: "Exploring intersections of technology, ethics, and cultural wisdom to build more inclusive and sustainable digital futures.",
-      srujanalayaDescription: "Championing creative expression and cultural preservation through design, connecting traditional wisdom with contemporary practice."
+      ux8: {
+        title: "UX8",
+        description: "Fostering design excellence and innovation through community-driven initiatives and collaborative learning experiences.",
+        tag: "Design Community"
+      },
+      dharmicFutures: {
+        title: "Dharmic Futures",
+        description: "Exploring intersections of technology, ethics, and cultural wisdom to build more inclusive and sustainable digital futures.",
+        tag: "Research & Ethics"
+      },
+      srujanalaya: {
+        title: "सृजनालय",
+        description: "Championing creative expression and cultural preservation through design, connecting traditional wisdom with contemporary practice.",
+        tag: "Cultural Design"
+      }
     },
     about: {
       heading: "About",
       paragraph1: "Design Leader with 10+ years of experience across UI/UX, Product Design, Visual Design, and Strategic Design, delivering digital products designed for scale, performance, and measurable impact across Digital Public Infrastructure, Cybersecurity, Defence, FinTech, Governance, and B2B/B2C platforms.",
       paragraph2: "I specialise in AI Product Design, Agentic AI Interfaces, Human-AI Interaction, Explainable AI (XAI), Design Systems, and Data-Driven Decision Platforms — translating complex, high-stakes systems into intuitive, secure, and trust-centered user experiences built for global scalability.",
       paragraph3: "My approach combines first-principles thinking, human-centered design, systems thinking, and responsible AI integration, enabling products that scale across users, geographies, and enterprise environments.",
-      learnMoreText: "Learn more about my background"
+      linkText: "Learn more about my background"
     },
     contact: {
       heading: "Get in Touch",
-      subheading: "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders.",
-      connectLabel: "Connect with me",
-      emailLabel: "Email",
-      emailText: "vibhav.ux8@gmail.com",
-      linkedinLabel: "LinkedIn",
-      linkedinText: "Connect professionally",
-      nameLabel: "Name",
-      namePlaceholder: "Your full name",
-      emailPlaceholder: "your.email@example.com",
-      messageLabel: "Message",
-      messagePlaceholder: "Tell me about your project or opportunity...",
-      submitButton: "Send Message",
-      successButton: "Message Sent Successfully!",
-      successMessage: "Thank you for reaching out! I'll get back to you within 24-48 hours."
+      description: "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders."
     }
   });
 
+  const [editedData, setEditedData] = useState(cmsData);
   const [hasChanges, setHasChanges] = useState(false);
-  const contentRefs = useRef<{ [key: string]: string }>({});
 
   useEffect(() => {
-    const defaultData = {
-      hero: {
-        heading1: "Envisioning smart UI-UX",
-        heading2: "with contextual awareness",
-        subtitle: "Bridging AI innovation, enterprise systems, and public-sector digital infrastructure through strategic design leadership.",
-        button1: "View Projects",
-        button2: "Let's Connect"
-      },
-      approach: {
-        heading: "Design is the bridge between complex problems and elegant solutions that scale",
-        subheading: "I transform organizational challenges into intuitive experiences through strategic systems thinking, rigorous research, and human-centered design.",
-        processTitle: "Quick Design Process",
-        processSubtitle: "A rigorous, iterative approach balancing user needs with business objectives"
-      },
-      organizations: {
-        heading: "Impact Beyond Design",
-        subheading: "Contributing to organizations and initiatives that shape the future of design, culture, and technology",
-        ux8Description: "Fostering design excellence and innovation through community-driven initiatives and collaborative learning experiences.",
-        dharmicDescription: "Exploring intersections of technology, ethics, and cultural wisdom to build more inclusive and sustainable digital futures.",
-        srujanalayaDescription: "Championing creative expression and cultural preservation through design, connecting traditional wisdom with contemporary practice."
-      },
-      about: {
-        heading: "About",
-        paragraph1: "Design Leader with 10+ years of experience across UI/UX, Product Design, Visual Design, and Strategic Design, delivering digital products designed for scale, performance, and measurable impact across Digital Public Infrastructure, Cybersecurity, Defence, FinTech, Governance, and B2B/B2C platforms.",
-        paragraph2: "I specialise in AI Product Design, Agentic AI Interfaces, Human-AI Interaction, Explainable AI (XAI), Design Systems, and Data-Driven Decision Platforms — translating complex, high-stakes systems into intuitive, secure, and trust-centered user experiences built for global scalability.",
-        paragraph3: "My approach combines first-principles thinking, human-centered design, systems thinking, and responsible AI integration, enabling products that scale across users, geographies, and enterprise environments.",
-        learnMoreText: "Learn more about my background"
-      },
-      contact: {
-        heading: "Get in Touch",
-        subheading: "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders.",
-        connectLabel: "Connect with me",
-        emailLabel: "Email",
-        emailText: "vibhav.ux8@gmail.com",
-        linkedinLabel: "LinkedIn",
-        linkedinText: "Connect professionally",
-        nameLabel: "Name",
-        namePlaceholder: "Your full name",
-        emailPlaceholder: "your.email@example.com",
-        messageLabel: "Message",
-        messagePlaceholder: "Tell me about your project or opportunity...",
-        submitButton: "Send Message",
-        successButton: "Message Sent Successfully!",
-        successMessage: "Thank you for reaching out! I'll get back to you within 24-48 hours."
-      }
-    };
-
     const saved = localStorage.getItem("cmsHomeData");
     if (saved) {
-      try {
-        const savedData = JSON.parse(saved);
-        // Deep merge saved data with defaults
-        const mergedData = {
-          hero: { ...defaultData.hero, ...savedData.hero },
-          approach: { ...defaultData.approach, ...savedData.approach },
-          organizations: { ...defaultData.organizations, ...savedData.organizations },
-          about: { ...defaultData.about, ...savedData.about },
-          contact: { ...defaultData.contact, ...savedData.contact }
-        };
-        setCmsData(mergedData);
-        contentRefs.current = JSON.parse(JSON.stringify(mergedData));
-      } catch (e) {
-        console.error("Error loading CMS data:", e);
-        setCmsData(defaultData);
-        contentRefs.current = JSON.parse(JSON.stringify(defaultData));
-      }
-    } else {
-      setCmsData(defaultData);
-      contentRefs.current = JSON.parse(JSON.stringify(defaultData));
+      const parsedData = JSON.parse(saved);
+      setCmsData(parsedData);
+      setEditedData(parsedData);
     }
   }, []);
 
-  const handleContentEdit = (path: string, value: string) => {
-    setHasChanges(true);
-    const keys = path.split('.');
-    const newData = { ...cmsData };
-    let current: any = newData;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) current[keys[i]] = {};
-      current = current[keys[i]];
-    }
-    current[keys[keys.length - 1]] = value;
-
-    setCmsData(newData);
-  };
-
   const handleSave = () => {
-    localStorage.setItem("cmsHomeData", JSON.stringify(cmsData));
+    localStorage.setItem("cmsHomeData", JSON.stringify(editedData));
+    setCmsData(editedData);
     setHasChanges(false);
-    console.log("Saved CMS Data:", cmsData);
     alert("Home page updated successfully!");
   };
 
-  // Debug: Log current data
-  useEffect(() => {
-    console.log("Current CMS Data:", cmsData);
-  }, [cmsData]);
+  const updateField = (section: string, field: string, value: string, subsection?: string) => {
+    setEditedData((prev: any) => {
+      const newData = { ...prev };
+      if (subsection) {
+        newData[section] = {
+          ...newData[section],
+          [subsection]: {
+            ...newData[section][subsection],
+            [field]: value
+          }
+        };
+      } else {
+        newData[section] = {
+          ...newData[section],
+          [field]: value
+        };
+      }
+      setHasChanges(true);
+      return newData;
+    });
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -211,27 +148,6 @@ export default function Home() {
     }
   };
 
-  // Editable component for inline editing
-  const Editable = ({ path, className = "", as = "span" }: { path: string; className?: string; as?: string }) => {
-    const keys = path.split('.');
-    let value: any = cmsData;
-    for (const key of keys) {
-      value = value?.[key];
-    }
-
-    if (!isAdminView) {
-      return as === "p" ? <p className={className}>{value || ""}</p> : <span className={className}>{value || ""}</span>;
-    }
-
-    return React.createElement(as, {
-      contentEditable: true,
-      suppressContentEditableWarning: true,
-      onBlur: (e: any) => handleContentEdit(path, e.target.textContent),
-      className: `${className} ${isAdminView ? 'outline-2 outline-dashed outline-yellow-400/50 hover:outline-yellow-400 focus:outline-yellow-500 rounded px-2 -mx-2 transition-all' : ''}`,
-      dangerouslySetInnerHTML: { __html: value || "" }
-    });
-  };
-
   const stats = [
     {
       value: "10+",
@@ -263,9 +179,57 @@ export default function Home() {
     }
   ];
 
+  const EditableText = ({
+    value,
+    onChange,
+    className = "",
+    multiline = false,
+    placeholder = "Click to edit..."
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    className?: string;
+    multiline?: boolean;
+    placeholder?: string;
+  }) => {
+    if (!isAdminView) {
+      return multiline ? <p className={className}>{value}</p> : <span className={className}>{value}</span>;
+    }
+
+    if (multiline) {
+      return (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${className} bg-yellow-50 border-2 border-yellow-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 w-full resize-none`}
+          rows={4}
+          placeholder={placeholder}
+        />
+      );
+    }
+
+    return (
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${className} bg-yellow-50 border-2 border-yellow-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 w-full`}
+        placeholder={placeholder}
+      />
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+
+      {/* Admin Edit Indicator */}
+      {isAdminView && (
+        <div className="fixed top-24 right-6 z-50 bg-yellow-400 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+          <Edit3 size={16} />
+          <span className="text-sm font-medium">Editing Mode</span>
+        </div>
+      )}
 
       {/* PANEL 1: HERO - ELEVATED & DYNAMIC */}
       <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-20 overflow-hidden">
@@ -316,21 +280,38 @@ export default function Home() {
               />
             </motion.div>
 
-            <motion.h1
+            <motion.div
               variants={fadeInUp}
               transition={{ duration: 0.8, delay: 0.1 }}
               className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.1] tracking-tight mb-6"
             >
-              <Editable path="hero.heading1" className="inline-block" /><br />
-              <Editable path="hero.heading2" className="inline-block italic bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent" />
-            </motion.h1>
+              <div className="mb-2">
+                <EditableText
+                  value={editedData.hero.heading1}
+                  onChange={(val) => updateField('hero', 'heading1', val)}
+                  className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.1] tracking-tight"
+                />
+              </div>
+              <div className="italic bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <EditableText
+                  value={editedData.hero.heading2}
+                  onChange={(val) => updateField('hero', 'heading2', val)}
+                  className="italic bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold"
+                />
+              </div>
+            </motion.div>
 
             <motion.div
               variants={fadeInUp}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto"
+              className="mb-8"
             >
-              <Editable path="hero.subtitle" as="p" className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto" />
+              <EditableText
+                value={editedData.hero.subtitle}
+                onChange={(val) => updateField('hero', 'subtitle', val)}
+                className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto"
+                multiline
+              />
             </motion.div>
 
             <motion.div
@@ -344,7 +325,20 @@ export default function Home() {
                   whileTap={{ scale: 0.98 }}
                   className="group px-8 py-4 bg-foreground text-background rounded-full font-medium flex items-center gap-2 shadow-lg"
                 >
-                  <Editable path="hero.button1" />
+                  {isAdminView ? (
+                    <input
+                      type="text"
+                      value={editedData.hero.button1}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        updateField('hero', 'button1', e.target.value);
+                      }}
+                      className="bg-white text-black px-2 py-1 rounded border-2 border-yellow-400"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    editedData.hero.button1
+                  )}
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </motion.button>
               </Link>
@@ -355,7 +349,20 @@ export default function Home() {
                   whileTap={{ scale: 0.98 }}
                   className="px-8 py-4 bg-background border-2 border-border rounded-full font-medium hover:border-foreground transition-colors"
                 >
-                  <Editable path="hero.button2" />
+                  {isAdminView ? (
+                    <input
+                      type="text"
+                      value={editedData.hero.button2}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        updateField('hero', 'button2', e.target.value);
+                      }}
+                      className="bg-white text-black px-2 py-1 rounded border-2 border-yellow-400"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    editedData.hero.button2
+                  )}
                 </motion.button>
               </Link>
             </motion.div>
@@ -385,10 +392,22 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="h-1 bg-gradient-to-r from-primary to-purple-600 mx-auto mb-8 rounded-full"
               />
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium leading-tight mb-8 max-w-4xl mx-auto">
-                <Editable path="approach.heading" />
-              </h2>
-              <Editable path="approach.subheading" as="p" className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed" />
+              <div className="text-3xl md:text-4xl lg:text-5xl font-medium leading-tight mb-8 max-w-4xl mx-auto">
+                <EditableText
+                  value={editedData.approach.heading}
+                  onChange={(val) => updateField('approach', 'heading', val)}
+                  className="text-3xl md:text-4xl lg:text-5xl font-medium leading-tight"
+                  multiline
+                />
+              </div>
+              <div className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                <EditableText
+                  value={editedData.approach.subheading}
+                  onChange={(val) => updateField('approach', 'subheading', val)}
+                  className="text-xl md:text-2xl text-muted-foreground leading-relaxed"
+                  multiline
+                />
+              </div>
             </motion.div>
 
             {/* Stats Infographic - Premium Cards */}
@@ -480,10 +499,20 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.2 }}
             >
               <div className="text-center mb-16">
-                <h3 className="text-4xl md:text-5xl font-medium mb-4">
-                  <Editable path="approach.processTitle" />
-                </h3>
-                <Editable path="approach.processSubtitle" as="p" className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed" />
+                <div className="text-4xl md:text-5xl font-medium mb-4">
+                  <EditableText
+                    value={editedData.approach.processHeading}
+                    onChange={(val) => updateField('approach', 'processHeading', val)}
+                    className="text-4xl md:text-5xl font-medium"
+                  />
+                </div>
+                <div className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                  <EditableText
+                    value={editedData.approach.processSubheading}
+                    onChange={(val) => updateField('approach', 'processSubheading', val)}
+                    className="text-xl md:text-2xl text-muted-foreground leading-relaxed"
+                  />
+                </div>
               </div>
 
               <div className="relative">
@@ -559,12 +588,21 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500 mx-auto mb-8 rounded-full"
               />
-              <h2 className="text-4xl md:text-5xl font-medium mb-6">
-                <Editable path="organizations.heading" />
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                <Editable path="organizations.subheading" />
-              </p>
+              <div className="text-4xl md:text-5xl font-medium mb-6">
+                <EditableText
+                  value={editedData.organizations.heading}
+                  onChange={(val) => updateField('organizations', 'heading', val)}
+                  className="text-4xl md:text-5xl font-medium"
+                />
+              </div>
+              <div className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                <EditableText
+                  value={editedData.organizations.subheading}
+                  onChange={(val) => updateField('organizations', 'subheading', val)}
+                  className="text-xl text-muted-foreground"
+                  multiline
+                />
+              </div>
             </motion.div>
 
             {/* Organization Tiles */}
@@ -586,14 +624,29 @@ export default function Home() {
                     <img src={ux8IconSvg} alt="UX8" className="w-full h-full object-cover" />
                   </motion.div>
 
-                  <h3 className="text-3xl font-medium mb-4">UX8</h3>
+                  <h3 className="text-3xl font-medium mb-4">
+                    <EditableText
+                      value={editedData.organizations.ux8.title}
+                      onChange={(val) => updateField('organizations', 'title', val, 'ux8')}
+                      className="text-3xl font-medium"
+                    />
+                  </h3>
 
                   <div className="text-muted-foreground leading-relaxed mb-6">
-                    <Editable path="organizations.ux8Description" as="p" className="text-muted-foreground leading-relaxed" />
+                    <EditableText
+                      value={editedData.organizations.ux8.description}
+                      onChange={(val) => updateField('organizations', 'description', val, 'ux8')}
+                      className="text-muted-foreground leading-relaxed"
+                      multiline
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                    <span>Design Community</span>
+                    <EditableText
+                      value={editedData.organizations.ux8.tag}
+                      onChange={(val) => updateField('organizations', 'tag', val, 'ux8')}
+                      className="text-sm text-primary font-medium"
+                    />
                     <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
                   </div>
                 </div>
@@ -616,14 +669,29 @@ export default function Home() {
                     <img src={dharmicFuturesIcon} alt="Dharmic Futures" className="w-full h-full object-contain" />
                   </motion.div>
 
-                  <h3 className="text-3xl font-medium mb-4">Dharmic Futures</h3>
+                  <h3 className="text-3xl font-medium mb-4">
+                    <EditableText
+                      value={editedData.organizations.dharmicFutures.title}
+                      onChange={(val) => updateField('organizations', 'title', val, 'dharmicFutures')}
+                      className="text-3xl font-medium"
+                    />
+                  </h3>
 
                   <div className="text-muted-foreground leading-relaxed mb-6">
-                    <Editable path="organizations.dharmicDescription" as="p" className="text-muted-foreground leading-relaxed" />
+                    <EditableText
+                      value={editedData.organizations.dharmicFutures.description}
+                      onChange={(val) => updateField('organizations', 'description', val, 'dharmicFutures')}
+                      className="text-muted-foreground leading-relaxed"
+                      multiline
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                    <span>Research & Ethics</span>
+                    <EditableText
+                      value={editedData.organizations.dharmicFutures.tag}
+                      onChange={(val) => updateField('organizations', 'tag', val, 'dharmicFutures')}
+                      className="text-sm text-primary font-medium"
+                    />
                     <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
                   </div>
                 </div>
@@ -646,14 +714,29 @@ export default function Home() {
                     <img src={srujanalayaIcon} alt="सृजनालय" className="w-full h-full object-contain" />
                   </motion.div>
 
-                  <h3 className="text-3xl font-medium mb-4">सृजनालय</h3>
+                  <h3 className="text-3xl font-medium mb-4">
+                    <EditableText
+                      value={editedData.organizations.srujanalaya.title}
+                      onChange={(val) => updateField('organizations', 'title', val, 'srujanalaya')}
+                      className="text-3xl font-medium"
+                    />
+                  </h3>
 
                   <div className="text-muted-foreground leading-relaxed mb-6">
-                    <Editable path="organizations.srujanalayaDescription" as="p" className="text-muted-foreground leading-relaxed" />
+                    <EditableText
+                      value={editedData.organizations.srujanalaya.description}
+                      onChange={(val) => updateField('organizations', 'description', val, 'srujanalaya')}
+                      className="text-muted-foreground leading-relaxed"
+                      multiline
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                    <span>Cultural Design</span>
+                    <EditableText
+                      value={editedData.organizations.srujanalaya.tag}
+                      onChange={(val) => updateField('organizations', 'tag', val, 'srujanalaya')}
+                      className="text-sm text-primary font-medium"
+                    />
                     <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
                   </div>
                 </div>
@@ -691,18 +774,37 @@ export default function Home() {
                 />
 
                 <h2 className="text-4xl md:text-5xl font-medium mb-8">
-                  <Editable path="about.heading" />
+                  <EditableText
+                    value={editedData.about.heading}
+                    onChange={(val) => updateField('about', 'heading', val)}
+                    className="text-4xl md:text-5xl font-medium"
+                  />
                 </h2>
 
                 <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                   <div className="text-xl text-foreground/90">
-                    <Editable path="about.paragraph1" as="p" className="text-xl text-foreground/90" />
+                    <EditableText
+                      value={editedData.about.paragraph1}
+                      onChange={(val) => updateField('about', 'paragraph1', val)}
+                      className="text-xl text-foreground/90 leading-relaxed"
+                      multiline
+                    />
                   </div>
                   <div>
-                    <Editable path="about.paragraph2" as="p" className="text-lg text-muted-foreground" />
+                    <EditableText
+                      value={editedData.about.paragraph2}
+                      onChange={(val) => updateField('about', 'paragraph2', val)}
+                      className="text-lg text-muted-foreground leading-relaxed"
+                      multiline
+                    />
                   </div>
                   <div>
-                    <Editable path="about.paragraph3" as="p" className="text-lg text-muted-foreground" />
+                    <EditableText
+                      value={editedData.about.paragraph3}
+                      onChange={(val) => updateField('about', 'paragraph3', val)}
+                      className="text-lg text-muted-foreground leading-relaxed"
+                      multiline
+                    />
                   </div>
                 </div>
 
@@ -714,16 +816,18 @@ export default function Home() {
                     to="/about"
                     className="inline-flex items-center gap-2 text-lg font-medium text-primary group"
                   >
-                    <Editable path="about.learnMoreText" />
+                    <EditableText
+                      value={editedData.about.linkText}
+                      onChange={(val) => updateField('about', 'linkText', val)}
+                      className="text-lg font-medium text-primary"
+                    />
                     <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
                   </Link>
                 </motion.div>
 
                 {/* Quick Contact - Elevated */}
                 <div className="mt-12 pt-10 border-t border-border">
-                  <p className="text-sm font-medium text-muted-foreground mb-6">
-                    <Editable path="contact.connectLabel" />
-                  </p>
+                  <p className="text-sm font-medium text-muted-foreground mb-6">Connect with me</p>
                   <div className="flex flex-col gap-4">
                     <motion.a
                       whileHover={{ x: 8 }}
@@ -734,12 +838,8 @@ export default function Home() {
                         <Mail size={20} className="text-primary" />
                       </div>
                       <div>
-                        <div className="text-sm font-medium mb-1">
-                          <Editable path="contact.emailLabel" />
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          <Editable path="contact.emailText" />
-                        </div>
+                        <div className="text-sm font-medium mb-1">Email</div>
+                        <div className="text-sm text-muted-foreground">vibhav.ux8@gmail.com</div>
                       </div>
                     </motion.a>
 
@@ -754,12 +854,8 @@ export default function Home() {
                         <Linkedin size={20} className="text-primary" />
                       </div>
                       <div>
-                        <div className="text-sm font-medium mb-1">
-                          <Editable path="contact.linkedinLabel" />
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          <Editable path="contact.linkedinText" />
-                        </div>
+                        <div className="text-sm font-medium mb-1">LinkedIn</div>
+                        <div className="text-sm text-muted-foreground">Connect professionally</div>
                       </div>
                     </motion.a>
                   </div>
@@ -778,10 +874,21 @@ export default function Home() {
               />
 
               <h2 className="text-4xl md:text-5xl font-medium mb-6">
-                <Editable path="contact.heading" />
+                <EditableText
+                  value={editedData.contact.heading}
+                  onChange={(val) => updateField('contact', 'heading', val)}
+                  className="text-4xl md:text-5xl font-medium"
+                />
               </h2>
 
-              <Editable path="contact.subheading" as="p" className="text-lg text-muted-foreground mb-10 leading-relaxed" />
+              <div className="text-lg text-muted-foreground mb-10 leading-relaxed">
+                <EditableText
+                  value={editedData.contact.description}
+                  onChange={(val) => updateField('contact', 'description', val)}
+                  className="text-lg text-muted-foreground leading-relaxed"
+                  multiline
+                />
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <motion.div
@@ -791,7 +898,7 @@ export default function Home() {
                   transition={{ duration: 0.5 }}
                 >
                   <label htmlFor="name" className="block mb-3 text-sm font-medium">
-                    <Editable path="contact.nameLabel" />
+                    Name
                   </label>
                   <motion.input
                     whileFocus={{ scale: 1.01, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}
@@ -803,7 +910,7 @@ export default function Home() {
                     onChange={handleChange}
                     required
                     className="w-full px-5 py-4 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:border-primary transition-all text-lg"
-                    placeholder={cmsData?.contact?.namePlaceholder || "Your full name"}
+                    placeholder="Your full name"
                   />
                 </motion.div>
 
@@ -814,7 +921,7 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
                   <label htmlFor="email" className="block mb-3 text-sm font-medium">
-                    <Editable path="contact.emailLabel" />
+                    Email
                   </label>
                   <motion.input
                     whileFocus={{ scale: 1.01, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}
@@ -826,7 +933,7 @@ export default function Home() {
                     onChange={handleChange}
                     required
                     className="w-full px-5 py-4 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:border-primary transition-all text-lg"
-                    placeholder={cmsData?.contact?.emailPlaceholder || "your.email@example.com"}
+                    placeholder="your.email@example.com"
                   />
                 </motion.div>
 
@@ -837,7 +944,7 @@ export default function Home() {
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
                   <label htmlFor="message" className="block mb-3 text-sm font-medium">
-                    <Editable path="contact.messageLabel" />
+                    Message
                   </label>
                   <motion.textarea
                     whileFocus={{ scale: 1.01, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}
@@ -849,7 +956,7 @@ export default function Home() {
                     required
                     rows={6}
                     className="w-full px-5 py-4 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:border-primary transition-all resize-none text-lg"
-                    placeholder={cmsData?.contact?.messagePlaceholder || "Tell me about your project or opportunity..."}
+                    placeholder="Tell me about your project or opportunity..."
                   />
                 </motion.div>
 
@@ -863,11 +970,11 @@ export default function Home() {
                   {submitted ? (
                     <>
                       <Award size={20} />
-                      <span>{cmsData?.contact?.successButton || "Message Sent Successfully!"}</span>
+                      <span>Message Sent Successfully!</span>
                     </>
                   ) : (
                     <>
-                      <span>{cmsData?.contact?.submitButton || "Send Message"}</span>
+                      <span>Send Message</span>
                       <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                     </>
                   )}
@@ -880,7 +987,7 @@ export default function Home() {
                     className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl"
                   >
                     <p className="text-sm text-green-700 dark:text-green-400">
-                      {cmsData?.contact?.successMessage || "Thank you for reaching out! I'll get back to you within 24-48 hours."}
+                      Thank you for reaching out! I'll get back to you within 24-48 hours.
                     </p>
                   </motion.div>
                 )}
@@ -889,14 +996,6 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-
-      {/* Admin Edit Indicator */}
-      {isAdminView && (
-        <div className="fixed top-24 right-6 z-50 bg-yellow-400 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
-          <Edit3 size={16} />
-          <span className="text-sm font-medium">Click text to edit</span>
-        </div>
-      )}
 
       {/* Update Button - Fixed at Bottom in Admin View */}
       {isAdminView && (
@@ -913,11 +1012,11 @@ export default function Home() {
             className={`px-8 py-4 rounded-full font-medium flex items-center gap-3 shadow-2xl transition-all ${
               hasChanges
                 ? "bg-green-600 text-white hover:bg-green-700"
-                : "bg-gray-400 text-gray-100 cursor-not-allowed"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
             <Save size={20} />
-            <span className="text-lg font-semibold">
+            <span className="text-lg">
               {hasChanges ? "Update Home Page" : "No Changes"}
             </span>
           </motion.button>

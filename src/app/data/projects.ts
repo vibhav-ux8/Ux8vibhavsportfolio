@@ -381,92 +381,60 @@ export const projects: Project[] = [
         caption: "Manifestation principles and futures thinking workshops"
       }
     ]
-  },
-  {
-    id: "education-learning-platform",
-    title: "K-12 Digital Learning Platform",
-    description: "Redesigned online learning platform for 500+ schools, improving student engagement and supporting remote education equity.",
-    tags: ["Digital Public Infrastructure", "Accessibility"],
-    category: "DPI & Governance",
-    sector: "UI-UX Design",
-    thumbnail: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&q=80",
-    icon: "GraduationCap",
-    year: "2024-2026",
-    role: "Product Designer",
-    context: "School districts needed equitable digital learning platform supporting in-person, remote, and hybrid education. Existing tools weren't accessible for students with disabilities or those with limited home internet. Platform needed to work across devices with varying capabilities.",
-    research: "Conducted research with teachers, students, and parents across 15 schools. Observed classroom and home learning environments. Identified digital divide affecting 40% of students. Created accessibility requirements supporting students with visual, auditory, cognitive, and motor disabilities.",
-    designSystem: "Designed offline-first architecture syncing when connection available. Created low-bandwidth mode with optimized media. Built universal design patterns supporting screen readers, keyboard navigation, and switch controls. Designed parent dashboard in 12 languages with literacy-appropriate content.",
-    prototyping: "Tested prototypes with students ages 5-18 including those with disabilities. Conducted co-design sessions with special education teachers. Validated on low-end devices and limited bandwidth. Iterated on gamification elements ensuring they supported learning rather than distraction.",
-    outcome: "Adopted by 500+ schools serving 200,000+ students. Student engagement metrics improved 85% vs legacy platform. Students with disabilities reported 4.5/5 satisfaction (vs 2.1 previously). Platform maintained 99.8% uptime including low-bandwidth scenarios. Received accessibility commendation from Department of Education.",
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1200&q=80",
-        caption: "Offline-first architecture with universal design patterns"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1200&q=80",
-        caption: "Multi-language parent dashboard supporting family engagement"
-      }
-    ]
-  },
-  {
-    id: "fintech-mobile-banking",
-    title: "Mobile Banking App for Underbanked Communities",
-    description: "Created inclusive mobile banking experience serving first-time banking users with focus on financial literacy and trust.",
-    tags: ["Fintech", "Accessibility"],
-    category: "Services",
-    sector: "UI-UX Design",
-    thumbnail: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&q=80",
-    icon: "Wallet",
-    year: "2024-2026",
-    role: "Product Designer",
-    context: "Fintech startup targeting underbanked populations who distrust traditional banks or lack access. Users had limited banking knowledge and concerns about fees, security, and complexity. Design needed to build trust while educating users on financial concepts.",
-    research: "Conducted ethnographic research in underserved communities. Interviewed 80+ first-time banking users about pain points and fears. Partnered with financial literacy organizations to understand educational needs. Analyzed competitor apps through lens of inclusive design.",
-    designSystem: "Designed progressive onboarding explaining banking concepts in plain language. Created transparent fee structure visible before every action. Built security features that felt protective rather than intimidating. Designed bilingual interface with culturally relevant imagery and examples.",
-    prototyping: "Tested prototypes with 60+ users including ESL speakers and elderly users. Conducted longitudinal diary studies tracking confidence over first 90 days. Iterated on financial education content based on comprehension testing. Created trust-building features like immediate transaction confirmations.",
-    outcome: "Acquired 100,000+ users in first year with 82% retention rate. Users reported 90% confidence in banking tasks vs 45% at onboarding. Zero-fee structure and transparent design led to 4.8/5 trust rating. Featured in Forbes as model for inclusive fintech design. 75% of users referred family members.",
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80",
-        caption: "Progressive onboarding with plain-language financial education"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=1200&q=80",
-        caption: "Transparent fee structure and trust-building security features"
-      }
-    ]
-  },
-  {
-    id: "supply-chain-platform",
-    title: "Supply Chain Management Platform",
-    description: "Designed logistics platform for global manufacturers, optimizing supply chain visibility and reducing delivery delays by 40%.",
-    tags: ["Governance", "Digital Investigation"],
-    category: "e-commerce",
-    sector: "Product Design",
-    thumbnail: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80",
-    icon: "Truck",
-    year: "2024-2026",
-    role: "Product Designer",
-    context: "Global manufacturing company struggled with supply chain visibility across 200+ suppliers and 50+ warehouses. Delays cost millions annually and customer satisfaction suffered. Needed unified platform for tracking, forecasting, and rapid response to disruptions.",
-    research: "Interviewed supply chain managers, warehouse operators, and logistics coordinators across 3 continents. Mapped current workflows identifying 15+ disconnected tools. Analyzed historical delay data to identify patterns. Shadowed teams during crisis response situations.",
-    designSystem: "Designed real-time tracking dashboard with predictive delay alerts. Created role-based views for different supply chain stakeholders. Built mobile-first interface for warehouse floor use. Designed exception-focused UI highlighting issues requiring immediate attention.",
-    prototyping: "Created interactive prototypes with simulated supply chain data. Tested with 30+ users in warehouse and office settings. Iterated on alert prioritization and mobile workflows. Built communication features enabling cross-team coordination during disruptions.",
-    outcome: "Reduced delivery delays by 40% in first 6 months. Improved supply chain visibility from 60% to 98%. Cut emergency shipping costs by $2.3M annually. User satisfaction at 4.6/5. Platform now used by 500+ employees across global operations.",
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1553413077-190dd305871c?w=1200&q=80",
-        caption: "Real-time tracking dashboard with predictive analytics"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?w=1200&q=80",
-        caption: "Mobile interface for warehouse operations"
-      }
-    ]
   }
 ];
 
+// Get merged projects (static + localStorage edits + new projects - deleted projects)
+export function getMergedProjects(): Project[] {
+  if (typeof window === 'undefined') return projects;
+
+  // Get deleted projects list
+  const deletedProjectsStr = localStorage.getItem("cmsDeletedProjects");
+  const deletedProjects = deletedProjectsStr ? JSON.parse(deletedProjectsStr) : [];
+
+  // Get edited existing projects
+  const savedEdits = localStorage.getItem("cmsProjectsData");
+  let mergedProjects = [...projects];
+
+  if (savedEdits) {
+    const editsData = JSON.parse(savedEdits);
+    mergedProjects = projects.map(project => {
+      if (editsData[project.id]) {
+        const editedProject = { ...project, ...editsData[project.id] };
+        // Preserve original thumbnail and logoOverlay if not explicitly changed in edits
+        if (!editsData[project.id].thumbnail || editsData[project.id].thumbnail === '') {
+          editedProject.thumbnail = project.thumbnail;
+        }
+        if (!editsData[project.id].logoOverlay || editsData[project.id].logoOverlay === '') {
+          editedProject.logoOverlay = project.logoOverlay;
+        }
+        if (!editsData[project.id].logo || editsData[project.id].logo === '') {
+          editedProject.logo = project.logo;
+        }
+        return editedProject;
+      }
+      return project;
+    });
+  }
+
+  // Filter out deleted projects
+  mergedProjects = mergedProjects.filter(project => !deletedProjects.includes(project.id));
+
+  // Get new projects created via CMS
+  const newProjects = localStorage.getItem("cmsNewProjects");
+  if (newProjects) {
+    const newProjectsList = JSON.parse(newProjects);
+    // Also filter deleted projects from new projects
+    const filteredNewProjects = newProjectsList.filter((p: Project) => !deletedProjects.includes(p.id));
+    mergedProjects = [...mergedProjects, ...filteredNewProjects];
+  }
+
+  return mergedProjects;
+}
+
 export function getProjectById(id: string): Project | undefined {
-  return projects.find(p => p.id === id);
+  const mergedProjects = getMergedProjects();
+  return mergedProjects.find(p => p.id === id);
 }
 
 export function getProjectsByTag(tag: string): Project[] {
@@ -522,6 +490,54 @@ export function getAllSectors(): string[] {
     return indexA - indexB;
   });
   return sortedSectors;
+}
+
+// Utility function to reset a specific project to its original state
+export function resetProjectToOriginal(projectId: string): void {
+  if (typeof window === 'undefined') return;
+  
+  const savedEdits = localStorage.getItem("cmsProjectsData");
+  if (savedEdits) {
+    const editsData = JSON.parse(savedEdits);
+    delete editsData[projectId];
+    localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
+  }
+}
+
+// Utility function to clear all project edits (reset all to original)
+export function resetAllProjectEdits(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem("cmsProjectsData");
+}
+
+// Delete a project (adds it to deleted list in localStorage)
+export function deleteProject(projectId: string): void {
+  if (typeof window === 'undefined') return;
+
+  // Add to deleted projects list
+  const deletedProjectsStr = localStorage.getItem("cmsDeletedProjects");
+  const deletedProjects = deletedProjectsStr ? JSON.parse(deletedProjectsStr) : [];
+
+  if (!deletedProjects.includes(projectId)) {
+    deletedProjects.push(projectId);
+    localStorage.setItem("cmsDeletedProjects", JSON.stringify(deletedProjects));
+  }
+
+  // Also remove from new projects if it exists there
+  const newProjectsStr = localStorage.getItem("cmsNewProjects");
+  if (newProjectsStr) {
+    const newProjects = JSON.parse(newProjectsStr);
+    const filteredNewProjects = newProjects.filter((p: Project) => p.id !== projectId);
+    localStorage.setItem("cmsNewProjects", JSON.stringify(filteredNewProjects));
+  }
+
+  // Also remove from edited projects if it exists there
+  const savedEdits = localStorage.getItem("cmsProjectsData");
+  if (savedEdits) {
+    const editsData = JSON.parse(savedEdits);
+    delete editsData[projectId];
+    localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
+  }
 }
 
 export function getProjectsByCategory(category: string): Project[] {

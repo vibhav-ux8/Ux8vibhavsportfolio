@@ -13,9 +13,11 @@ export default function AdminLogin() {
     e.preventDefault();
 
     // Simple authentication - in production, this should be a proper backend auth
-    if (email === "admin@ux8.in" && password === "admin123") {
+    if (email === "admin@ux8.in" && password === "Eryszebz@2401_ux8") {
       localStorage.setItem("isAdminAuthenticated", "true");
-      navigate("/admin/dashboard");
+      localStorage.setItem("isAdminLoggedIn", "true");
+      localStorage.setItem("adminViewEnabled", "true");
+      navigate("/");
     } else {
       setError("Invalid credentials. Please try again.");
     }
@@ -104,12 +106,6 @@ export default function AdminLogin() {
             </a>
           </div>
         </motion.form>
-
-        <div className="mt-8 p-4 bg-muted/30 rounded-lg text-sm text-muted-foreground">
-          <p className="font-medium mb-2">Demo Credentials:</p>
-          <p>Email: admin@ux8.in</p>
-          <p>Password: admin123</p>
-        </div>
       </motion.div>
     </div>
   );
