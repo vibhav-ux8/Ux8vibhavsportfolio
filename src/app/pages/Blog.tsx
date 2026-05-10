@@ -6,6 +6,8 @@ import { getMergedBlogPosts, getAllBlogCategories } from "../data/blog";
 import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Edit2 } from "lucide-react";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
 import { useNavigate } from "react-router";
 import patternLockIcon from "../../imports/pattern-lock.png";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -62,59 +64,45 @@ const DraggableBlogCard = ({ post, index, moveBlogPost, onUpdate, isAdminView }:
   );
 };
 
+const DEFAULT_BLOG_TITLE = "Insights & Thinking";
+const DEFAULT_BLOG_DESC = "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.";
+
 export default function Blog() {
   const { isAdminView } = useAdminView();
+  const { store, loading, setStore } = useCMS();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTimeline, setSelectedTimeline] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set(["2026", "2025"]));
-  const [blogPosts, setBlogPosts] = useState(getMergedBlogPosts());
-  const [blogOrder, setBlogOrder] = useState<string[]>([]);
+  const [blogPosts, setBlogPosts] = useState(() => getMergedBlogPosts(store));
+  const [blogOrder, setBlogOrder] = useState<string[]>(() => store['blogOrder'] ?? []);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [pageTitle, setPageTitle] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('blogPageTitle');
-      return saved || "Insights & Thinking";
-    }
-    return "Insights & Thinking";
-  });
-  const [pageDescription, setPageDescription] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('blogPageDescription');
-      return saved || "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.";
-    }
-    return "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.";
-  });
+  const [pageTitle, setPageTitle] = useState(store['blogPageTitle'] ?? DEFAULT_BLOG_TITLE);
+  const [pageDescription, setPageDescription] = useState(store['blogPageDescription'] ?? DEFAULT_BLOG_DESC);
   const postsPerPage = 15;
   const allCategories = getAllBlogCategories();
 
-  // Load blog order from localStorage on mount
   useEffect(() => {
-    const mergedPosts = getMergedBlogPosts();
-    setBlogPosts(mergedPosts);
-
-    const savedOrder = localStorage.getItem("blogOrder");
-    if (savedOrder) {
-      setBlogOrder(JSON.parse(savedOrder));
-    } else {
-      // Initialize with current blog post IDs
-      setBlogOrder(mergedPosts.map(p => p.id));
+    if (!loading) {
+      const mergedPosts = getMergedBlogPosts(store);
+      setBlogPosts(mergedPosts);
+      setBlogOrder(store['blogOrder'] ?? mergedPosts.map(p => p.id));
+      setPageTitle(store['blogPageTitle'] ?? DEFAULT_BLOG_TITLE);
+      setPageDescription(store['blogPageDescription'] ?? DEFAULT_BLOG_DESC);
     }
-  }, []);
+  }, [loading]);
 
-  const handleUpdate = () => {
-    const mergedPosts = getMergedBlogPosts();
+  const handleUpdate = useCallback(() => {
+    const mergedPosts = getMergedBlogPosts(store);
     setBlogPosts(mergedPosts);
-
-    // Update blog order if new posts were added
     setBlogOrder(prevOrder => {
       const currentIds = new Set(prevOrder);
       const newIds = mergedPosts.filter(p => !currentIds.has(p.id)).map(p => p.id);
       return [...prevOrder, ...newIds];
     });
-  };
+  }, [store]);
 
   // Apply saved order to blog posts
   const orderedBlogPosts = [...blogPosts].sort((a, b) => {
@@ -133,19 +121,13 @@ export default function Blog() {
       const newOrder = [...prevOrder];
       const dragIndex = newOrder.indexOf(dragId);
       const hoverIndex = newOrder.indexOf(hoverId);
-
       if (dragIndex === -1 || hoverIndex === -1) return prevOrder;
-
-      // Remove drag item and insert at hover position
       newOrder.splice(dragIndex, 1);
       newOrder.splice(hoverIndex, 0, dragId);
-
-      // Save to localStorage
-      localStorage.setItem("blogOrder", JSON.stringify(newOrder));
-
+      setStore('blogOrder' as CMSKey, newOrder);
       return newOrder;
     });
-  }, []);
+  }, [setStore]);
 
   // Extract unique years and months from blog posts
   const getTimeline = () => {
@@ -220,25 +202,23 @@ export default function Blog() {
     setExpandedYears(newExpandedYears);
   };
 
-  const handleSaveTitle = () => {
-    localStorage.setItem('blogPageTitle', pageTitle);
+  const handleSaveTitle = async () => {
+    await setStore('blogPageTitle' as CMSKey, pageTitle);
     setIsEditingTitle(false);
   };
 
   const handleCancelTitle = () => {
-    const saved = localStorage.getItem('blogPageTitle');
-    setPageTitle(saved || "Insights & Thinking");
+    setPageTitle(store['blogPageTitle'] ?? DEFAULT_BLOG_TITLE);
     setIsEditingTitle(false);
   };
 
-  const handleSaveDescription = () => {
-    localStorage.setItem('blogPageDescription', pageDescription);
+  const handleSaveDescription = async () => {
+    await setStore('blogPageDescription' as CMSKey, pageDescription);
     setIsEditingDescription(false);
   };
 
   const handleCancelDescription = () => {
-    const saved = localStorage.getItem('blogPageDescription');
-    setPageDescription(saved || "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.");
+    setPageDescription(store['blogPageDescription'] ?? DEFAULT_BLOG_DESC);
     setIsEditingDescription(false);
   };
 

@@ -1,65 +1,31 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface AdminViewContextType {
   isAdminView: boolean;
-  toggleAdminView: () => void;
-  setAdminView: (value: boolean) => void;
 }
 
 const AdminViewContext = createContext<AdminViewContextType | undefined>(undefined);
 
 export function AdminViewProvider({ children }: { children: ReactNode }) {
-  const [isAdminView, setIsAdminView] = useState(() => {
-    // Check if user is logged in and has admin view enabled
-    const isLoggedIn = localStorage.getItem("isAdminLoggedIn") === "true";
-    const adminViewEnabled = localStorage.getItem("adminViewEnabled") === "true";
-    return isLoggedIn && adminViewEnabled;
-  });
+  const [isAdminView, setIsAdminView] = useState(false);
 
-  const toggleAdminView = () => {
-    const newValue = !isAdminView;
-    setIsAdminView(newValue);
-    localStorage.setItem("adminViewEnabled", String(newValue));
-  };
-
-  const setAdminView = (value: boolean) => {
-    setIsAdminView(value);
-    localStorage.setItem("adminViewEnabled", String(value));
-  };
-
-  // Re-check admin status on mount and when localStorage changes
   useEffect(() => {
-    const checkAdminStatus = () => {
-      const isLoggedIn = localStorage.getItem("isAdminLoggedIn") === "true";
-      const adminViewEnabled = localStorage.getItem("adminViewEnabled") === "true";
-      const shouldBeAdmin = isLoggedIn && adminViewEnabled;
+    // Check current session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAdminView(!!session);
+    });
 
-      if (shouldBeAdmin !== isAdminView) {
-        setIsAdminView(shouldBeAdmin);
-      }
-    };
+    // React to sign-in / sign-out in real time (also works across tabs)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdminView(!!session);
+    });
 
-    // Check on mount
-    checkAdminStatus();
-
-    // Check when localStorage changes (works across tabs)
-    window.addEventListener('storage', checkAdminStatus);
-
-    // Check on custom login event
-    window.addEventListener('adminLoginChange', checkAdminStatus);
-
-    // Also check on visibility change (when user returns to tab)
-    document.addEventListener('visibilitychange', checkAdminStatus);
-
-    return () => {
-      window.removeEventListener('storage', checkAdminStatus);
-      window.removeEventListener('adminLoginChange', checkAdminStatus);
-      document.removeEventListener('visibilitychange', checkAdminStatus);
-    };
-  }, [isAdminView]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
-    <AdminViewContext.Provider value={{ isAdminView, toggleAdminView, setAdminView }}>
+    <AdminViewContext.Provider value={{ isAdminView }}>
       {children}
     </AdminViewContext.Provider>
   );

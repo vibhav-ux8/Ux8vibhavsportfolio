@@ -5,6 +5,8 @@ import { CaseStudyCard } from "../components/CaseStudyCard";
 import { getMergedProjects, getAllCategories, getAllSectors } from "../data/projects";
 import { motion } from "motion/react";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
 import { useNavigate } from "react-router";
 import { Plus, Settings, Edit2, Trash2, X } from "lucide-react";
 import hikingIcon from "../../imports/hiking.png";
@@ -69,17 +71,21 @@ const DraggableCard = ({ project, index, moveProject, onFlip, isFlipped, onUpdat
   );
 };
 
+const DEFAULT_WORK_TITLE = "Work";
+const DEFAULT_WORK_DESC = "Case studies demonstrating strategic product design, systems thinking, and measurable impact across AI platforms, enterprise tools, and public-sector digital services.";
+
 export default function Work() {
   const { isAdminView } = useAdminView();
+  const { store, loading, setStore } = useCMS();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState(getMergedProjects());
-  const [projectOrder, setProjectOrder] = useState<string[]>([]);
+  const [projects, setProjects] = useState(() => getMergedProjects(store));
+  const [projectOrder, setProjectOrder] = useState<string[]>(() => store['projectOrder'] ?? []);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [allCategories, setAllCategories] = useState(getAllCategories());
-  const [allSectors, setAllSectors] = useState(getAllSectors());
+  const [allCategories, setAllCategories] = useState(() => getAllCategories(store));
+  const [allSectors, setAllSectors] = useState(() => getAllSectors(store));
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingSector, setEditingSector] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -89,52 +95,35 @@ export default function Work() {
   const [newSectorName, setNewSectorName] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [pageTitle, setPageTitle] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('workPageTitle');
-      return saved || "Work";
-    }
-    return "Work";
-  });
-  const [pageDescription, setPageDescription] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('workPageDescription');
-      return saved || "Case studies demonstrating strategic product design, systems thinking, and measurable impact across AI platforms, enterprise tools, and public-sector digital services.";
-    }
-    return "Case studies demonstrating strategic product design, systems thinking, and measurable impact across AI platforms, enterprise tools, and public-sector digital services.";
-  });
+  const [pageTitle, setPageTitle] = useState(store['workPageTitle'] ?? DEFAULT_WORK_TITLE);
+  const [pageDescription, setPageDescription] = useState(store['workPageDescription'] ?? DEFAULT_WORK_DESC);
   const projectsPerPage = 15;
 
-  // Reload projects when component mounts to get latest edits
+  // Sync from context once CMS finishes loading
   useEffect(() => {
-    const mergedProjects = getMergedProjects();
-    setProjects(mergedProjects);
-    setAllCategories(getAllCategories());
-    setAllSectors(getAllSectors());
-
-    // Load saved project order
-    const savedOrder = localStorage.getItem("projectOrder");
-    if (savedOrder) {
-      setProjectOrder(JSON.parse(savedOrder));
-    } else {
-      // Initialize with current project IDs
-      setProjectOrder(mergedProjects.map(p => p.id));
+    if (!loading) {
+      const mergedProjects = getMergedProjects(store);
+      setProjects(mergedProjects);
+      setAllCategories(getAllCategories(store));
+      setAllSectors(getAllSectors(store));
+      const savedOrder: string[] = store['projectOrder'] ?? mergedProjects.map(p => p.id);
+      setProjectOrder(savedOrder);
+      setPageTitle(store['workPageTitle'] ?? DEFAULT_WORK_TITLE);
+      setPageDescription(store['workPageDescription'] ?? DEFAULT_WORK_DESC);
     }
-  }, []);
+  }, [loading]);
 
-  const handleUpdate = () => {
-    const mergedProjects = getMergedProjects();
+  const handleUpdate = useCallback(() => {
+    const mergedProjects = getMergedProjects(store);
     setProjects(mergedProjects);
-    setAllCategories(getAllCategories());
-    setAllSectors(getAllSectors());
-
-    // Update project order if new projects were added
+    setAllCategories(getAllCategories(store));
+    setAllSectors(getAllSectors(store));
     setProjectOrder(prevOrder => {
       const currentIds = new Set(prevOrder);
       const newIds = mergedProjects.filter(p => !currentIds.has(p.id)).map(p => p.id);
       return [...prevOrder, ...newIds];
     });
-  };
+  }, [store]);
 
   // Apply saved order to projects
   const orderedProjects = [...projects].sort((a, b) => {
@@ -153,74 +142,45 @@ export default function Work() {
       const newOrder = [...prevOrder];
       const dragIndex = newOrder.indexOf(dragId);
       const hoverIndex = newOrder.indexOf(hoverId);
-
       if (dragIndex === -1 || hoverIndex === -1) return prevOrder;
-
-      // Remove drag item and insert at hover position
       newOrder.splice(dragIndex, 1);
       newOrder.splice(hoverIndex, 0, dragId);
-
-      // Save to localStorage
-      localStorage.setItem("projectOrder", JSON.stringify(newOrder));
-
+      setStore('projectOrder' as CMSKey, newOrder);
       return newOrder;
     });
-  }, []);
+  }, [setStore]);
 
   const handleEditCategory = (category: string) => {
     setEditingCategory(category);
     setEditValue(category);
   };
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (editingCategory && editValue && editValue !== editingCategory) {
-      // Update all projects using this category
-      const existingProjects = localStorage.getItem("cmsProjectsData");
-      const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-
-      Object.keys(projectsData).forEach((projectId) => {
-        if (projectsData[projectId].category === editingCategory) {
-          projectsData[projectId].category = editValue;
-        }
+      const projectsData = { ...(store['cmsProjectsData'] ?? {}) };
+      Object.keys(projectsData).forEach(pid => {
+        if (projectsData[pid].category === editingCategory) projectsData[pid] = { ...projectsData[pid], category: editValue };
       });
-
-      localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-      // Refresh projects
+      await setStore('cmsProjectsData' as CMSKey, projectsData);
       handleUpdate();
     }
     setEditingCategory(null);
     setEditValue("");
   };
 
-  const handleDeleteCategory = (category: string) => {
+  const handleDeleteCategory = async (category: string) => {
     if (confirm(`Are you sure you want to delete the category "${category}"? All projects using this category will have it removed.`)) {
-      // Update all projects using this category to remove it
-      const existingProjects = localStorage.getItem("cmsProjectsData");
-      const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-
-      Object.keys(projectsData).forEach((projectId) => {
-        if (projectsData[projectId].category === category) {
-          projectsData[projectId].category = "";
-        }
+      const projectsData = { ...(store['cmsProjectsData'] ?? {}) };
+      Object.keys(projectsData).forEach(pid => {
+        if (projectsData[pid].category === category) projectsData[pid] = { ...projectsData[pid], category: "" };
       });
-
-      localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-      // Also update new projects
-      const newProjects = localStorage.getItem("cmsNewProjects");
-      if (newProjects) {
-        const newProjectsList = JSON.parse(newProjects);
-        const updatedNewProjects = newProjectsList.map((project: any) => {
-          if (project.category === category) {
-            return { ...project, category: "" };
-          }
-          return project;
-        });
-        localStorage.setItem("cmsNewProjects", JSON.stringify(updatedNewProjects));
-      }
-
-      // Refresh projects and filters
+      const newProjects = (store['cmsNewProjects'] ?? []).map((p: any) =>
+        p.category === category ? { ...p, category: "" } : p
+      );
+      await Promise.all([
+        setStore('cmsProjectsData' as CMSKey, projectsData),
+        setStore('cmsNewProjects' as CMSKey, newProjects),
+      ]);
       handleUpdate();
       setSelectedCategory(null);
     }
@@ -231,55 +191,32 @@ export default function Work() {
     setEditValue(sector);
   };
 
-  const handleSaveSector = () => {
+  const handleSaveSector = async () => {
     if (editingSector && editValue && editValue !== editingSector) {
-      // Update all projects using this sector
-      const existingProjects = localStorage.getItem("cmsProjectsData");
-      const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-
-      Object.keys(projectsData).forEach((projectId) => {
-        if (projectsData[projectId].sector === editingSector) {
-          projectsData[projectId].sector = editValue;
-        }
+      const projectsData = { ...(store['cmsProjectsData'] ?? {}) };
+      Object.keys(projectsData).forEach(pid => {
+        if (projectsData[pid].sector === editingSector) projectsData[pid] = { ...projectsData[pid], sector: editValue };
       });
-
-      localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-      // Refresh projects
+      await setStore('cmsProjectsData' as CMSKey, projectsData);
       handleUpdate();
     }
     setEditingSector(null);
     setEditValue("");
   };
 
-  const handleDeleteSector = (sector: string) => {
+  const handleDeleteSector = async (sector: string) => {
     if (confirm(`Are you sure you want to delete the discipline "${sector}"? All projects using this discipline will have it removed.`)) {
-      // Update all projects using this sector to remove it
-      const existingProjects = localStorage.getItem("cmsProjectsData");
-      const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-
-      Object.keys(projectsData).forEach((projectId) => {
-        if (projectsData[projectId].sector === sector) {
-          projectsData[projectId].sector = "";
-        }
+      const projectsData = { ...(store['cmsProjectsData'] ?? {}) };
+      Object.keys(projectsData).forEach(pid => {
+        if (projectsData[pid].sector === sector) projectsData[pid] = { ...projectsData[pid], sector: "" };
       });
-
-      localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-      // Also update new projects
-      const newProjects = localStorage.getItem("cmsNewProjects");
-      if (newProjects) {
-        const newProjectsList = JSON.parse(newProjects);
-        const updatedNewProjects = newProjectsList.map((project: any) => {
-          if (project.sector === sector) {
-            return { ...project, sector: "" };
-          }
-          return project;
-        });
-        localStorage.setItem("cmsNewProjects", JSON.stringify(updatedNewProjects));
-      }
-
-      // Refresh projects and filters
+      const newProjects = (store['cmsNewProjects'] ?? []).map((p: any) =>
+        p.sector === sector ? { ...p, sector: "" } : p
+      );
+      await Promise.all([
+        setStore('cmsProjectsData' as CMSKey, projectsData),
+        setStore('cmsNewProjects' as CMSKey, newProjects),
+      ]);
       handleUpdate();
       setSelectedSector(null);
     }
@@ -302,30 +239,25 @@ export default function Work() {
     }
   };
 
-  const handleSaveDescription = () => {
-    localStorage.setItem('workPageDescription', pageDescription);
+  const handleSaveDescription = async () => {
+    await setStore('workPageDescription' as CMSKey, pageDescription);
     setIsEditingDescription(false);
   };
 
   const handleCancelDescription = () => {
-    const saved = localStorage.getItem('workPageDescription');
-    setPageDescription(saved || "Case studies demonstrating strategic product design, systems thinking, and measurable impact across AI platforms, enterprise tools, and public-sector digital services.");
+    setPageDescription(store['workPageDescription'] ?? DEFAULT_WORK_DESC);
     setIsEditingDescription(false);
   };
 
-  const handleSaveTitle = () => {
-    localStorage.setItem('workPageTitle', pageTitle);
+  const handleSaveTitle = async () => {
+    await setStore('workPageTitle' as CMSKey, pageTitle);
     setIsEditingTitle(false);
   };
 
   const handleCancelTitle = () => {
-    const saved = localStorage.getItem('workPageTitle');
-    setPageTitle(saved || "Work");
+    setPageTitle(store['workPageTitle'] ?? DEFAULT_WORK_TITLE);
     setIsEditingTitle(false);
   };
-
-  console.log('Categories:', allCategories);
-  console.log('Sectors:', allSectors);
 
   const filteredProjects = orderedProjects.filter(p => {
     const matchesCategory = selectedCategory

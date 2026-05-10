@@ -1,26 +1,23 @@
 import { Link, useLocation } from "react-router";
-import { Menu, X, Eye, EyeOff, Moon, Sun } from "lucide-react";
+import { Menu, X, Moon, Sun } from "lucide-react";
 import { House, UserCircle, Briefcase, PenNib, EnvelopeSimple } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import logoImage from "figma:asset/d817f10c5a8dcea24cbac0c933d18bd131f71370.png";
 import { useAdminView } from "../contexts/AdminViewContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { supabase } from "../lib/supabase";
 
 export function Navigation() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const { isAdminView, toggleAdminView } = useAdminView();
+  const { isAdminView } = useAdminView();
   const { theme, toggleTheme } = useTheme();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Check login status
   useEffect(() => {
-    const checkLoginStatus = () => {
-      setIsLoggedIn(localStorage.getItem("isAdminLoggedIn") === "true");
-    };
-    checkLoginStatus();
-    window.addEventListener('storage', checkLoginStatus);
-    return () => window.removeEventListener('storage', checkLoginStatus);
+    supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setIsLoggedIn(!!s));
+    return () => subscription.unsubscribe();
   }, []);
 
   // Scroll to top on route change
@@ -36,9 +33,7 @@ export function Navigation() {
     { path: "/contact", label: "Contact", Icon: EnvelopeSimple },
   ];
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -46,9 +41,9 @@ export function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img 
-              src={logoImage} 
-              alt="Vibhav Kamat UX Portfolio" 
+            <img
+              src={logoImage}
+              alt="Vibhav Kamat UX Portfolio"
               className="h-12 w-auto rounded-[4px]"
             />
           </Link>
@@ -80,22 +75,11 @@ export function Navigation() {
               </Link>
             ))}
 
-            {/* Admin View Toggle */}
+            {/* Admin indicator when logged in */}
             {isLoggedIn && (
-              <button
-                onClick={toggleAdminView}
-                className={`flex flex-col items-center gap-1.5 transition-all duration-300 group ${
-                  isAdminView ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={isAdminView ? "Switch to Public View" : "Switch to Admin View"}
-              >
-                <div className="transition-all duration-300 group-hover:scale-105">
-                  {isAdminView ? <Eye size={20} /> : <EyeOff size={20} />}
-                </div>
-                <span className="text-[13px] tracking-[0.01em] transition-all duration-300 font-normal">
-                  {isAdminView ? "Admin" : "Public"}
-                </span>
-              </button>
+              <span className="text-xs font-medium text-primary border border-primary/30 rounded-full px-2 py-0.5">
+                {isAdminView ? "Admin" : "Admin"}
+              </span>
             )}
 
             {/* Theme Toggle */}
@@ -144,24 +128,6 @@ export function Navigation() {
                   <span>{link.label}</span>
                 </Link>
               ))}
-
-              {/* Admin View Toggle (Mobile) */}
-              {isLoggedIn && (
-                <button
-                  onClick={() => {
-                    toggleAdminView();
-                    setIsOpen(false);
-                  }}
-                  className={`flex items-center gap-3 text-base transition-colors ${
-                    isAdminView ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  <div className={isAdminView ? "text-primary" : "text-muted-foreground/70"}>
-                    {isAdminView ? <Eye size={24} /> : <EyeOff size={24} />}
-                  </div>
-                  <span>{isAdminView ? "Admin View" : "Public View"}</span>
-                </button>
-              )}
 
               {/* Theme Toggle (Mobile) */}
               <button

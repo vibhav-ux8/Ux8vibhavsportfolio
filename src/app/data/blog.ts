@@ -1,3 +1,5 @@
+import type { CMSStore } from '../lib/cms';
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -8,7 +10,7 @@ export interface BlogPost {
   category: string;
   slug: string;
   image: string;
-  content?: ContentBlock[]; // Advanced content blocks
+  content?: ContentBlock[];
 }
 
 export interface ContentBlock {
@@ -16,9 +18,9 @@ export interface ContentBlock {
   type: 'text' | 'heading' | 'image' | 'audio' | 'video';
   content: string;
   metadata?: {
-    level?: number; // For headings (h2, h3, h4)
-    caption?: string; // For images/audio/video
-    alt?: string; // For images
+    level?: number;
+    caption?: string;
+    alt?: string;
   };
 }
 
@@ -60,57 +62,33 @@ export const blogPosts: BlogPost[] = [
 
 export function getAllBlogTags(): string[] {
   const tags = new Set<string>();
-  blogPosts.forEach(post => {
-    post.tags.forEach(tag => tags.add(tag));
-  });
+  blogPosts.forEach(post => post.tags.forEach(tag => tags.add(tag)));
   return Array.from(tags).sort();
 }
 
 export function getAllBlogCategories(): string[] {
   const categories = new Set<string>();
-  blogPosts.forEach(post => {
-    categories.add(post.category);
+  blogPosts.forEach(post => categories.add(post.category));
+  const order = ["LEA & Defence", "DPI & Governance", "IKS & Culture", "Healthcare", "Services", "e-commerce"];
+  return Array.from(categories).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
   });
-  // Use same custom sort order as Work page domains
-  const order = [
-    "LEA & Defence",
-    "DPI & Governance",
-    "IKS & Culture",
-    "Healthcare",
-    "Services",
-    "e-commerce"
-  ];
-  const sortedCategories = Array.from(categories).sort((a, b) => {
-    const indexA = order.indexOf(a);
-    const indexB = order.indexOf(b);
-    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-    return indexA - indexB;
-  });
-  return sortedCategories;
 }
 
-// Function to get merged blog posts (original + CMS edits + new CMS posts)
-export function getMergedBlogPosts(): BlogPost[] {
+// Get merged blog posts (original + CMS store edits + new CMS posts)
+export function getMergedBlogPosts(cmsStore: CMSStore = {}): BlogPost[] {
   try {
-    // Check if we're in a browser environment
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return blogPosts;
-    }
+    const cmsPosts: BlogPost[] = cmsStore['cmsBlogPosts'] ?? [];
+    const deletedSet = new Set<string>(cmsStore['cmsDeletedBlogPosts'] ?? []);
 
-    const savedPosts = localStorage.getItem("cmsBlogPosts");
-    const deletedSlugs = localStorage.getItem("cmsDeletedBlogPosts");
-    const deletedSet = deletedSlugs ? new Set(JSON.parse(deletedSlugs)) : new Set();
-
-    if (!savedPosts) {
-      // Filter out deleted posts
+    if (!cmsPosts.length) {
       return blogPosts.filter(post => !deletedSet.has(post.slug));
     }
 
-    const cmsPosts: BlogPost[] = JSON.parse(savedPosts);
-
-    // Start with original posts (updated with CMS edits) and filter out deleted posts
     const mergedOriginals = blogPosts
       .filter(post => !deletedSet.has(post.slug))
       .map(originalPost => {
@@ -118,33 +96,24 @@ export function getMergedBlogPosts(): BlogPost[] {
         return cmsPost || originalPost;
       });
 
-    // Find new CMS-only posts (posts that don't exist in original blogPosts)
     const originalSlugs = new Set(blogPosts.map(p => p.slug));
     const newCMSPosts = cmsPosts.filter(
       cmsPost => !originalSlugs.has(cmsPost.slug) && !deletedSet.has(cmsPost.slug)
     );
 
-    // Combine and sort by date (newest first)
-    const allPosts = [...mergedOriginals, ...newCMSPosts];
-    return allPosts.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateB.getTime() - dateA.getTime();
+    return [...mergedOriginals, ...newCMSPosts].sort((a, b) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
   } catch (error) {
-    console.error("Error loading CMS blog posts:", error);
+    console.error("Error merging blog posts:", error);
     return blogPosts;
   }
 }
 
-// Function to get a single blog post by slug (with CMS edits applied)
-export function getBlogBySlug(slug: string): BlogPost | undefined {
-  const mergedPosts = getMergedBlogPosts();
-  return mergedPosts.find(post => post.slug === slug);
+export function getBlogBySlug(slug: string, cmsStore: CMSStore = {}): BlogPost | undefined {
+  return getMergedBlogPosts(cmsStore).find(post => post.slug === slug);
 }
 
-// Function to get a single blog post by id (with CMS edits applied)
-export function getBlogById(id: string): BlogPost | undefined {
-  const mergedPosts = getMergedBlogPosts();
-  return mergedPosts.find(post => post.id === id);
+export function getBlogById(id: string, cmsStore: CMSStore = {}): BlogPost | undefined {
+  return getMergedBlogPosts(cmsStore).find(post => post.id === id);
 }

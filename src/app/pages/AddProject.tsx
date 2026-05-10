@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
+import { supabase } from "../lib/supabase";
+import { useCMS } from "../contexts/CMSContext";
 import { motion, useScroll, useTransform } from "motion/react";
 import {
   Save,
@@ -32,6 +34,7 @@ interface Section {
 
 export default function AddProject() {
   const navigate = useNavigate();
+  const { store, setStore } = useCMS();
 
   const [activeSection, setActiveSection] = useState<string>("cover");
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -40,10 +43,9 @@ export default function AddProject() {
   const [sectionTitleValue, setSectionTitleValue] = useState("");
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAdminAuthenticated");
-    if (!isAuthenticated) {
-      navigate("/admin/login");
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/admin/login");
+    });
   }, [navigate]);
 
   // Initialize sections with default structure
@@ -417,7 +419,7 @@ export default function AddProject() {
     alert("Draft saved successfully!");
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     try {
       if (!basicInfo.title || basicInfo.category.length === 0) {
         alert("Please fill in at least the title and select at least one category before publishing.");
@@ -459,17 +461,16 @@ export default function AddProject() {
         images: projectImages,
       };
 
-      const existingProjects = localStorage.getItem("cmsNewProjects");
-      const projectsList = existingProjects ? JSON.parse(existingProjects) : [];
-
-      const existingIndex = projectsList.findIndex((p: any) => p.id === newProject.id);
+      const existingProjects: any[] = store['cmsNewProjects'] ?? [];
+      const existingIndex = existingProjects.findIndex((p: any) => p.id === newProject.id);
+      let projectsList: any[];
       if (existingIndex >= 0) {
-        projectsList[existingIndex] = newProject;
+        projectsList = existingProjects.map((p, i) => (i === existingIndex ? newProject : p));
       } else {
-        projectsList.push(newProject);
+        projectsList = [...existingProjects, newProject];
       }
 
-      localStorage.setItem("cmsNewProjects", JSON.stringify(projectsList));
+      await setStore('cmsNewProjects', projectsList);
 
       alert("Project published successfully!");
       navigate("/work");

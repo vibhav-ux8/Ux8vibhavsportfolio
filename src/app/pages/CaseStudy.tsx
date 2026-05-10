@@ -9,6 +9,8 @@ import { EditableText } from "../components/EditableText";
 import { EditableImage } from "../components/EditableImage";
 import { ImageUpload } from "../components/ImageUpload";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
 import predictArchitecture from "figma:asset/9d537f5cc6573164bde668097537f5d4460a2997.png";
@@ -69,6 +71,7 @@ const CustomNextArrow = (props: any) => {
 export default function CaseStudy() {
   const { id } = useParams<{ id: string }>();
   const { isAdminView } = useAdminView();
+  const { store, setStore } = useCMS();
 
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("cover");
@@ -84,46 +87,29 @@ export default function CaseStudy() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
-  // Reload project data whenever id changes to ensure fresh data after edits
-  const [project, setProject] = useState(id ? getProjectById(id) : undefined);
+  // Reload project data whenever id or cmsStore changes
+  const [project, setProject] = useState(id ? getProjectById(id, store) : undefined);
   const [editableProject, setEditableProject] = useState(project);
 
-  // Reload project data when ID changes
   useEffect(() => {
-    console.log("CaseStudy: Loading project for id:", id);
-    const freshProject = id ? getProjectById(id) : undefined;
-    console.log("CaseStudy: Loaded project data:", freshProject);
+    const freshProject = id ? getProjectById(id, store) : undefined;
     setProject(freshProject);
     setEditableProject(freshProject);
-  }, [id]);
+  }, [id, store]);
 
-  // Save changes to localStorage
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (!project || !editableProject) return;
-
-    const existingProjects = localStorage.getItem("cmsProjectsData");
-    const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-    projectsData[project.id] = editableProject;
-    localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-    alert("Changes saved successfully! Refresh the page to see updates.");
+    const projectsData = { ...(store['cmsProjectsData'] ?? {}), [project.id]: editableProject };
+    await setStore('cmsProjectsData' as CMSKey, projectsData);
+    alert("Changes saved successfully!");
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!project || !editableProject) return;
-
-    // First save the changes
-    const existingProjects = localStorage.getItem("cmsProjectsData");
-    const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-    projectsData[project.id] = editableProject;
-    localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-    // Mark as published
     const updatedProject = { ...editableProject, published: true, publishedAt: new Date().toISOString() };
-    projectsData[project.id] = updatedProject;
-    localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-    alert("Project published successfully! Refresh the page to see updates.");
+    const projectsData = { ...(store['cmsProjectsData'] ?? {}), [project.id]: updatedProject };
+    await setStore('cmsProjectsData' as CMSKey, projectsData);
+    alert("Project published successfully!");
   };
 
   const updateProjectField = (field: string, value: any) => {

@@ -15,6 +15,7 @@ import EditBlogPost from "./pages/EditBlogPost";
 import NewBlogPost from "./pages/NewBlogPost";
 import { AdminViewProvider } from "./contexts/AdminViewContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { CMSProvider } from "./contexts/CMSContext";
 import { initializeStorage } from "./lib/supabase";
 
 const NotFound = () => (
@@ -39,6 +40,7 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AdminViewProvider>
+          <CMSProvider>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/projects" element={<Projects />} />
@@ -55,6 +57,7 @@ export default function App() {
             <Route path="/blog/new" element={<NewBlogPost />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </CMSProvider>
         </AdminViewProvider>
       </ThemeProvider>
     </BrowserRouter>

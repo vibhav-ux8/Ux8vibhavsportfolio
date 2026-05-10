@@ -5,73 +5,55 @@ import { LogOut, FileText, FolderOpen, PlusCircle, Edit2, Trash2 } from "lucide-
 import { getMergedProjects, deleteProject } from "../data/projects";
 import { getMergedBlogPosts } from "../data/blog";
 import { StorageSetupButton } from "../components/StorageSetupButton";
+import { supabase } from "../lib/supabase";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { store, setStore } = useCMS();
   const [activeTab, setActiveTab] = useState<"work" | "blog">("work");
   const [projects, setProjects] = useState<any[]>([]);
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
 
-  // Load initial data
+  // Load initial data from CMS store
   useEffect(() => {
-    setProjects(getMergedProjects());
-    setBlogPosts(getMergedBlogPosts());
-  }, []);
+    setProjects(getMergedProjects(store));
+    setBlogPosts(getMergedBlogPosts(store));
+  }, [store]);
 
-  // Reload projects when Work tab is opened
+  // Reload when switching tabs
   useEffect(() => {
-    if (activeTab === "work") {
-      setProjects(getMergedProjects());
-    }
-  }, [activeTab]);
-
-  // Reload blog posts when Blog tab is opened
-  useEffect(() => {
-    if (activeTab === "blog") {
-      setBlogPosts(getMergedBlogPosts());
-    }
+    if (activeTab === "work") setProjects(getMergedProjects(store));
+    if (activeTab === "blog") setBlogPosts(getMergedBlogPosts(store));
   }, [activeTab]);
 
   useEffect(() => {
-    // Check authentication
-    const isAuthenticated = localStorage.getItem("isAdminAuthenticated");
-    if (!isAuthenticated) {
-      navigate("/admin/login");
-    }
+    // Check authentication via Supabase Auth
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/admin/login");
+    });
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAdminAuthenticated");
-    localStorage.removeItem("isAdminLoggedIn");
-    localStorage.removeItem("adminViewEnabled");
-
-    // Trigger custom event to notify context of logout
-    window.dispatchEvent(new Event('adminLoginChange'));
-
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate("/");
   };
 
-  const handleDeleteProject = (projectId: string) => {
+  const handleDeleteProject = async (projectId: string) => {
     if (confirm("Are you sure you want to delete this project?")) {
-      deleteProject(projectId);
-      setProjects(getMergedProjects());
+      await deleteProject(projectId, store, setStore);
+      setProjects(getMergedProjects({ ...store }));
     }
   };
 
-  const handleDeleteBlogPost = (postId: string) => {
+  const handleDeleteBlogPost = async (postId: string) => {
     if (confirm("Are you sure you want to delete this blog post?")) {
-      const existingPosts = localStorage.getItem("cmsBlogData");
-      const blogData = existingPosts ? JSON.parse(existingPosts) : {};
-
-      // Mark as deleted
-      const deletedPosts = localStorage.getItem("cmsDeletedBlogPosts");
-      const deletedList = deletedPosts ? JSON.parse(deletedPosts) : [];
+      const deletedList: string[] = store['cmsDeletedBlogPosts'] ?? [];
       if (!deletedList.includes(postId)) {
-        deletedList.push(postId);
-        localStorage.setItem("cmsDeletedBlogPosts", JSON.stringify(deletedList));
+        await setStore('cmsDeletedBlogPosts' as CMSKey, [...deletedList, postId]);
       }
-
-      setBlogPosts(getMergedBlogPosts());
+      setBlogPosts(getMergedBlogPosts({ ...store, cmsDeletedBlogPosts: [...deletedList, postId] }));
     }
   };
 

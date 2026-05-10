@@ -5,6 +5,7 @@ import kavachThumbnail from "figma:asset/45e5cd2d6bc059c07d9741ad2d8d8c8a2b4816a
 import kavachLogoOverlay from "figma:asset/585b3b78ebd78bd8195037b7d052c0617ba5ed56.png";
 import immuneThumbnail from "figma:asset/67bc22aba19654ede810fd7ef233a8e777a29076.png";
 import immuneLogoOverlay from "figma:asset/61524d725f7719b193079141feda829efdb07bee.png";
+import type { CMSStore, CMSKey } from '../lib/cms';
 
 export interface Project {
   id: string;
@@ -115,59 +116,32 @@ export const projects: Project[] = [
   }
 ];
 
-// Get merged projects (static + localStorage edits + new projects - deleted projects)
-export function getMergedProjects(): Project[] {
-  if (typeof window === 'undefined') return projects;
+// Get merged projects (static + CMS store edits + new projects - deleted projects)
+export function getMergedProjects(cmsStore: CMSStore = {}): Project[] {
+  const deletedProjects: string[] = cmsStore['cmsDeletedProjects'] ?? [];
+  const savedEdits: Record<string, any> = cmsStore['cmsProjectsData'] ?? {};
+  const newProjects: Project[] = cmsStore['cmsNewProjects'] ?? [];
 
-  // Get deleted projects list
-  const deletedProjectsStr = localStorage.getItem("cmsDeletedProjects");
-  const deletedProjects = deletedProjectsStr ? JSON.parse(deletedProjectsStr) : [];
+  let mergedProjects = projects.map(project => {
+    const edits = savedEdits[project.id];
+    if (!edits) return project;
+    const editedProject = { ...project, ...edits };
+    if (!edits.thumbnail || edits.thumbnail === '') editedProject.thumbnail = project.thumbnail;
+    if (!edits.logoOverlay || edits.logoOverlay === '') editedProject.logoOverlay = project.logoOverlay;
+    if (!edits.logo || edits.logo === '') editedProject.logo = project.logo;
+    return editedProject;
+  });
 
-  // Get edited existing projects
-  const savedEdits = localStorage.getItem("cmsProjectsData");
-  let mergedProjects = [...projects];
-
-  if (savedEdits) {
-    const editsData = JSON.parse(savedEdits);
-    console.log("Loading CMS edits:", editsData);
-    mergedProjects = projects.map(project => {
-      if (editsData[project.id]) {
-        console.log(`Merging edits for project ${project.id}:`, editsData[project.id]);
-        const editedProject = { ...project, ...editsData[project.id] };
-        // Preserve original thumbnail and logoOverlay if not explicitly changed in edits
-        if (!editsData[project.id].thumbnail || editsData[project.id].thumbnail === '') {
-          editedProject.thumbnail = project.thumbnail;
-        }
-        if (!editsData[project.id].logoOverlay || editsData[project.id].logoOverlay === '') {
-          editedProject.logoOverlay = project.logoOverlay;
-        }
-        if (!editsData[project.id].logo || editsData[project.id].logo === '') {
-          editedProject.logo = project.logo;
-        }
-        return editedProject;
-      }
-      return project;
-    });
-  }
-
-  // Filter out deleted projects
   mergedProjects = mergedProjects.filter(project => !deletedProjects.includes(project.id));
 
-  // Get new projects created via CMS
-  const newProjects = localStorage.getItem("cmsNewProjects");
-  if (newProjects) {
-    const newProjectsList = JSON.parse(newProjects);
-    // Also filter deleted projects from new projects
-    const filteredNewProjects = newProjectsList.filter((p: Project) => !deletedProjects.includes(p.id));
-    mergedProjects = [...mergedProjects, ...filteredNewProjects];
-  }
+  const filteredNewProjects = newProjects.filter((p: Project) => !deletedProjects.includes(p.id));
+  mergedProjects = [...mergedProjects, ...filteredNewProjects];
 
   return mergedProjects;
 }
 
-export function getProjectById(id: string): Project | undefined {
-  const mergedProjects = getMergedProjects();
-  return mergedProjects.find(p => p.id === id);
+export function getProjectById(id: string, cmsStore: CMSStore = {}): Project | undefined {
+  return getMergedProjects(cmsStore).find(p => p.id === id);
 }
 
 export function getProjectsByTag(tag: string): Project[] {
@@ -180,129 +154,73 @@ export function getAllTags(): string[] {
   return Array.from(tags).sort().slice(0, 9);
 }
 
-export function getAllCategories(): string[] {
+export function getAllCategories(cmsStore: CMSStore = {}): string[] {
   const categories = new Set<string>();
-  // Use merged projects instead of just static projects
-  const allProjects = getMergedProjects();
-  allProjects.forEach(p => {
-    // Handle both string and array types
-    if (p.category) {
-      if (Array.isArray(p.category)) {
-        p.category.forEach(cat => {
-          if (cat && cat.trim() !== '') {
-            categories.add(cat);
-          }
-        });
-      } else if (typeof p.category === 'string' && p.category.trim() !== '') {
-        categories.add(p.category);
-      }
+  getMergedProjects(cmsStore).forEach(p => {
+    if (Array.isArray(p.category)) {
+      p.category.forEach(cat => { if (cat?.trim()) categories.add(cat); });
+    } else if (typeof p.category === 'string' && p.category.trim()) {
+      categories.add(p.category);
     }
   });
-  // Custom sort order
-  const order = [
-    "LEA & Defence",
-    "DPI & Governance",
-    "IKS & Culture",
-    "Healthcare",
-    "Services",
-    "e-commerce"
-  ];
-  const sortedCategories = Array.from(categories).sort((a, b) => {
-    const indexA = order.indexOf(a);
-    const indexB = order.indexOf(b);
-    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-    return indexA - indexB;
+  const order = ["LEA & Defence", "DPI & Governance", "IKS & Culture", "Healthcare", "Services", "e-commerce"];
+  return Array.from(categories).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
   });
-  return sortedCategories;
 }
 
-export function getAllSectors(): string[] {
+export function getAllSectors(cmsStore: CMSStore = {}): string[] {
   const sectors = new Set<string>();
-  // Use merged projects instead of just static projects
-  const allProjects = getMergedProjects();
-  allProjects.forEach(p => {
-    // Handle both string and array types
-    if (p.sector) {
-      if (Array.isArray(p.sector)) {
-        p.sector.forEach(sec => {
-          if (sec && sec.trim() !== '') {
-            sectors.add(sec);
-          }
-        });
-      } else if (typeof p.sector === 'string' && p.sector.trim() !== '') {
-        sectors.add(p.sector);
-      }
+  getMergedProjects(cmsStore).forEach(p => {
+    if (Array.isArray(p.sector)) {
+      p.sector.forEach(sec => { if (sec?.trim()) sectors.add(sec); });
+    } else if (typeof p.sector === 'string' && p.sector.trim()) {
+      sectors.add(p.sector);
     }
   });
-  // Custom sort order
-  const order = [
-    "UI-UX Design",
-    "Product Design",
-    "Communication",
-    "Game Design",
-    "Digital Illustration"
-  ];
-  const sortedSectors = Array.from(sectors).sort((a, b) => {
-    const indexA = order.indexOf(a);
-    const indexB = order.indexOf(b);
-    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-    return indexA - indexB;
+  const order = ["UI-UX Design", "Product Design", "Communication", "Game Design", "Digital Illustration"];
+  return Array.from(sectors).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
   });
-  return sortedSectors;
-}
-
-// Utility function to reset a specific project to its original state
-export function resetProjectToOriginal(projectId: string): void {
-  if (typeof window === 'undefined') return;
-
-  const savedEdits = localStorage.getItem("cmsProjectsData");
-  if (savedEdits) {
-    const editsData = JSON.parse(savedEdits);
-    delete editsData[projectId];
-    localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
-  }
-}
-
-// Utility function to clear all project edits (reset all to original)
-export function resetAllProjectEdits(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem("cmsProjectsData");
-}
-
-// Delete a project (adds it to deleted list in localStorage)
-export function deleteProject(projectId: string): void {
-  if (typeof window === 'undefined') return;
-
-  // Add to deleted projects list
-  const deletedProjectsStr = localStorage.getItem("cmsDeletedProjects");
-  const deletedProjects = deletedProjectsStr ? JSON.parse(deletedProjectsStr) : [];
-
-  if (!deletedProjects.includes(projectId)) {
-    deletedProjects.push(projectId);
-    localStorage.setItem("cmsDeletedProjects", JSON.stringify(deletedProjects));
-  }
-
-  // Also remove from new projects if it exists there
-  const newProjectsStr = localStorage.getItem("cmsNewProjects");
-  if (newProjectsStr) {
-    const newProjects = JSON.parse(newProjectsStr);
-    const filteredNewProjects = newProjects.filter((p: Project) => p.id !== projectId);
-    localStorage.setItem("cmsNewProjects", JSON.stringify(filteredNewProjects));
-  }
-
-  // Also remove from edited projects if it exists there
-  const savedEdits = localStorage.getItem("cmsProjectsData");
-  if (savedEdits) {
-    const editsData = JSON.parse(savedEdits);
-    delete editsData[projectId];
-    localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
-  }
 }
 
 export function getProjectsByCategory(category: string): Project[] {
   return projects.filter(p => p.category === category);
+}
+
+// Delete a project — updates three CMS keys, returns updated store slices
+export async function deleteProject(
+  projectId: string,
+  cmsStore: CMSStore,
+  setStore: (key: CMSKey, value: any) => Promise<void>
+): Promise<void> {
+  const deletedProjects: string[] = cmsStore['cmsDeletedProjects'] ?? [];
+  const newProjects: Project[] = cmsStore['cmsNewProjects'] ?? [];
+  const savedEdits: Record<string, any> = { ...(cmsStore['cmsProjectsData'] ?? {}) };
+
+  const updates: Promise<void>[] = [];
+
+  if (!deletedProjects.includes(projectId)) {
+    updates.push(setStore('cmsDeletedProjects', [...deletedProjects, projectId]));
+  }
+
+  const filteredNew = newProjects.filter(p => p.id !== projectId);
+  if (filteredNew.length !== newProjects.length) {
+    updates.push(setStore('cmsNewProjects', filteredNew));
+  }
+
+  if (savedEdits[projectId]) {
+    delete savedEdits[projectId];
+    updates.push(setStore('cmsProjectsData', savedEdits));
+  }
+
+  await Promise.all(updates);
 }

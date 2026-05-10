@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { supabase } from "../lib/supabase";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
 import { motion } from "motion/react";
 import {
   ArrowLeft, Save, Edit2, Check, X, Calendar, Clock,
@@ -12,7 +15,8 @@ import { ImageUpload } from "../components/ImageUpload";
 export default function EditBlogPost() {
   const navigate = useNavigate();
   const { slug } = useParams();
-  
+  const { store, setStore, loading } = useCMS();
+
   // Find the blog post
   const originalPost = blogPosts.find((p) => p.slug === slug);
 
@@ -21,25 +25,19 @@ export default function EditBlogPost() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAdminAuthenticated");
-    if (!isAuthenticated) {
-      navigate("/admin/login");
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/admin/login");
+    });
     if (!originalPost) {
       alert("Blog post not found!");
       navigate("/blog");
     }
   }, [navigate, originalPost]);
 
-  // Initialize post data with existing CMS data or defaults
-  const [postData, setPostData] = useState<BlogPost>(() => {
-    // Load from localStorage if exists
-    const savedPosts = localStorage.getItem("cmsBlogPosts");
-    if (savedPosts) {
-      const parsed = JSON.parse(savedPosts);
-      const savedPost = parsed.find((p: BlogPost) => p.slug === slug);
-      if (savedPost) return savedPost;
-    }
+  const getInitialPostData = (): BlogPost => {
+    const savedPosts: BlogPost[] = store['cmsBlogPosts'] ?? [];
+    const savedPost = savedPosts.find((p) => p.slug === slug);
+    if (savedPost) return savedPost;
     return originalPost || {
       id: "",
       title: "",
@@ -52,7 +50,16 @@ export default function EditBlogPost() {
       image: "",
       content: [],
     };
-  });
+  };
+
+  const [postData, setPostData] = useState<BlogPost>(getInitialPostData);
+
+  useEffect(() => {
+    if (!loading) {
+      setPostData(getInitialPostData());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,31 +69,20 @@ export default function EditBlogPost() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSave = () => {
-    try {
-      // Get existing saved posts
-      const savedPosts = localStorage.getItem("cmsBlogPosts");
-      let posts: BlogPost[] = savedPosts ? JSON.parse(savedPosts) : [];
-
-      // Update or add the post
-      const existingIndex = posts.findIndex((p) => p.slug === postData.slug);
-      if (existingIndex >= 0) {
-        posts[existingIndex] = postData;
-      } else {
-        posts.push(postData);
-      }
-
-      // Save to localStorage
-      localStorage.setItem("cmsBlogPosts", JSON.stringify(posts));
-      alert("Blog post saved successfully!");
-    } catch (error) {
-      console.error("Error saving blog post:", error);
-      alert("Error saving blog post. Please try again.");
+  const handleSave = async (showAlert = true) => {
+    let posts: BlogPost[] = store['cmsBlogPosts'] ?? [];
+    const existingIndex = posts.findIndex((p) => p.slug === postData.slug);
+    if (existingIndex >= 0) {
+      posts = posts.map((p, i) => (i === existingIndex ? postData : p));
+    } else {
+      posts = [...posts, postData];
     }
+    await setStore('cmsBlogPosts', posts);
+    if (showAlert) alert("Blog post saved successfully!");
   };
 
-  const handlePublish = () => {
-    handleSave();
+  const handlePublish = async () => {
+    await handleSave(false);
     alert("Blog post published successfully!");
   };
 

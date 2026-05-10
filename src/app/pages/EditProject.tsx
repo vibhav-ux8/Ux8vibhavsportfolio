@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router";
+import { supabase } from "../lib/supabase";
+import { useCMS } from "../contexts/CMSContext";
 import { motion, useScroll, useTransform } from "motion/react";
 import {
   Save,
@@ -35,7 +37,8 @@ interface Section {
 export default function EditProject() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const project = getProjectById(id || "");
+  const { store, setStore } = useCMS();
+  const project = getProjectById(id || "", store);
 
   const [activeSection, setActiveSection] = useState<string>("cover");
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -44,10 +47,9 @@ export default function EditProject() {
   const [sectionTitleValue, setSectionTitleValue] = useState("");
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAdminAuthenticated");
-    if (!isAuthenticated) {
-      navigate("/admin/login");
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/admin/login");
+    });
     if (!project) {
       alert("Project not found!");
       navigate("/work");
@@ -438,7 +440,7 @@ export default function EditProject() {
     alert("Draft saved successfully!");
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     try {
       if (!basicInfo.title || basicInfo.category.length === 0) {
         alert("Please fill in at least the title and select at least one category before publishing.");
@@ -483,37 +485,23 @@ export default function EditProject() {
         images: projectImages,
       };
 
-      const existingProjects = localStorage.getItem("cmsProjectsData");
-      const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
-      projectsData[project!.id] = updatedProject;
-      localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
-
-      console.log("Published project data:", updatedProject);
-      console.log("All CMS projects:", projectsData);
-
-      // Verify it was saved
-      const verifyData = localStorage.getItem("cmsProjectsData");
-      console.log("Verification - data saved to localStorage:", verifyData);
-      const parsedVerify = JSON.parse(verifyData || "{}");
-      console.log("Verification - parsed project:", parsedVerify[project!.id]);
+      const existingProjects: Record<string, any> = store['cmsProjectsData'] ?? {};
+      const projectsData = { ...existingProjects, [project!.id]: updatedProject };
+      await setStore('cmsProjectsData', projectsData);
 
       alert("Project published successfully!");
-
-      // Small delay to ensure localStorage persists before redirect
-      setTimeout(() => {
-        window.location.href = "/work";
-      }, 100);
+      navigate("/work");
     } catch (error) {
       console.error("Error publishing project:", error);
       alert("Error publishing project. Please try again.");
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm(`Are you sure you want to delete "${project?.title}"?\n\nThis action cannot be undone.`)) {
-      deleteProject(project!.id);
+      await deleteProject(project!.id, store, setStore);
       alert("Project deleted successfully!");
-      window.location.href = "/work";
+      navigate("/work");
     }
   };
 

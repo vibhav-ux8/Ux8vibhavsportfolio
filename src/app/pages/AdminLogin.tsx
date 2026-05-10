@@ -2,29 +2,30 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Lock, User } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Simple authentication - in production, this should be a proper backend auth
-    if (email === "admin@ux8.in" && password === "Eryszebz@2401_ux8") {
-      localStorage.setItem("isAdminAuthenticated", "true");
-      localStorage.setItem("isAdminLoggedIn", "true");
-      localStorage.setItem("adminViewEnabled", "true");
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-      // Trigger custom event to notify context of login
-      window.dispatchEvent(new Event('adminLoginChange'));
+    setLoading(false);
 
-      navigate("/");
-    } else {
+    if (authError) {
       setError("Invalid credentials. Please try again.");
+      return;
     }
+
+    navigate("/");
   };
 
   return (
@@ -99,9 +100,10 @@ export default function AdminLogin() {
 
           <button
             type="submit"
-            className="w-full bg-foreground text-background py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors"
+            disabled={loading}
+            className="w-full bg-foreground text-background py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors disabled:opacity-60"
           >
-            Sign In
+            {loading ? "Signing in…" : "Sign In"}
           </button>
 
           <div className="text-center">

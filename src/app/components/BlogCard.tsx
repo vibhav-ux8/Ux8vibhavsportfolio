@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router";
 import { useState } from "react";
 import { useAdminView } from "../contexts/AdminViewContext";
 import { AdminActionMenu } from "./AdminActionMenu";
+import { useCMS } from "../contexts/CMSContext";
 
 interface BlogCardProps {
   post: BlogPost;
@@ -15,28 +16,27 @@ export function BlogCard({ post, onUpdate }: BlogCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { isAdminView } = useAdminView();
   const navigate = useNavigate();
+  const { store, setStore } = useCMS();
 
   const handleEdit = () => {
     navigate(`/blog/edit/${post.slug}`);
   };
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
     const newPost = {
       ...post,
       slug: `${post.slug}-copy-${Date.now()}`,
       title: `${post.title} (Copy)`
     };
 
-    const savedPosts = localStorage.getItem("cmsBlogPosts");
-    const postsList = savedPosts ? JSON.parse(savedPosts) : [];
-    postsList.push(newPost);
-    localStorage.setItem("cmsBlogPosts", JSON.stringify(postsList));
+    const postsList: BlogPost[] = store['cmsBlogPosts'] ?? [];
+    await setStore('cmsBlogPosts', [...postsList, newPost]);
 
     if (onUpdate) onUpdate();
     alert(`"${post.title}" duplicated successfully!`);
   };
 
-  const handleMoveTo = () => {
+  const handleMoveTo = async () => {
     const categories = ['Design Leadership', 'Product Strategy', 'AI & Ethics', 'Systems Design', 'Case Studies', 'Process & Methods', 'Career Growth', 'Other'];
     const currentCategory = post.category;
     const otherCategories = categories.filter(c => c !== currentCategory);
@@ -51,35 +51,27 @@ export function BlogCard({ post, onUpdate }: BlogCardProps) {
         : otherCategories[Number(choice) - 1];
 
       if (selectedCategory) {
-        const savedPosts = localStorage.getItem("cmsBlogData");
-        const blogData = savedPosts ? JSON.parse(savedPosts) : {};
-
-        blogData[post.slug] = {
-          ...blogData[post.slug],
-          category: selectedCategory
-        };
-
-        localStorage.setItem("cmsBlogData", JSON.stringify(blogData));
+        const cmsBlogPosts: BlogPost[] = store['cmsBlogPosts'] ?? [];
+        const updated = cmsBlogPosts.map((p) =>
+          p.slug === post.slug ? { ...p, category: selectedCategory } : p
+        );
+        await setStore('cmsBlogPosts', updated);
         if (onUpdate) onUpdate();
         alert(`"${post.title}" moved to "${selectedCategory}"!`);
       }
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm(`Are you sure you want to delete "${post.title}"?\n\nThis action cannot be undone.`)) {
-      const deletedSlugs = localStorage.getItem("cmsDeletedBlogPosts");
-      const deletedSet = deletedSlugs ? new Set(JSON.parse(deletedSlugs)) : new Set();
+      const deletedSlugs: string[] = store['cmsDeletedBlogPosts'] ?? [];
+      const deletedSet = new Set(deletedSlugs);
       deletedSet.add(post.slug);
-      localStorage.setItem("cmsDeletedBlogPosts", JSON.stringify([...deletedSet]));
-
-      const savedPosts = localStorage.getItem("cmsBlogPosts");
-      if (savedPosts) {
-        let posts = JSON.parse(savedPosts);
-        posts = posts.filter((p: any) => p.slug !== post.slug);
-        localStorage.setItem("cmsBlogPosts", JSON.stringify(posts));
-      }
-
+      const cmsBlogPosts: BlogPost[] = store['cmsBlogPosts'] ?? [];
+      await Promise.all([
+        setStore('cmsDeletedBlogPosts', [...deletedSet]),
+        setStore('cmsBlogPosts', cmsBlogPosts.filter((p) => p.slug !== post.slug)),
+      ]);
       if (onUpdate) onUpdate();
     }
   };

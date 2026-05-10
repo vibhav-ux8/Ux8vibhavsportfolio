@@ -171,6 +171,60 @@ app.post("/make-server-79e7cc1a/upload", async (c) => {
   }
 });
 
+// KV store endpoints — batch-get MUST be registered before the :key wildcard
+
+// POST /kv/batch-get — fetch multiple keys in one round trip
+app.post("/make-server-79e7cc1a/kv/batch-get", async (c) => {
+  try {
+    const { keys } = await c.req.json();
+    if (!Array.isArray(keys)) return c.json({ error: 'keys must be an array' }, 400);
+    const { data, error } = await supabase
+      .from("kv_store_79e7cc1a")
+      .select("key, value")
+      .in("key", keys);
+    if (error) throw new Error(error.message);
+    const result: Record<string, any> = {};
+    (data ?? []).forEach((row: { key: string; value: any }) => { result[row.key] = row.value; });
+    return c.json({ values: result });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// GET /kv/:key — get a single value
+app.get("/make-server-79e7cc1a/kv/:key", async (c) => {
+  try {
+    const key = c.req.param("key");
+    const value = await kv.get(key);
+    return c.json({ value: value ?? null });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// POST /kv/:key — set a single value
+app.post("/make-server-79e7cc1a/kv/:key", async (c) => {
+  try {
+    const key = c.req.param("key");
+    const { value } = await c.req.json();
+    await kv.set(key, value);
+    return c.json({ ok: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// DELETE /kv/:key — delete a single value
+app.delete("/make-server-79e7cc1a/kv/:key", async (c) => {
+  try {
+    const key = c.req.param("key");
+    await kv.del(key);
+    return c.json({ ok: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // Delete image endpoint
 app.delete("/make-server-79e7cc1a/upload", async (c) => {
   try {
