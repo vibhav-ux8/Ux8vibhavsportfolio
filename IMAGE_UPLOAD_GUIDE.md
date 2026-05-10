@@ -4,16 +4,19 @@ This guide explains how to use the drag-and-drop image upload system integrated 
 
 ## Overview
 
-Images are now uploaded directly to Supabase Storage instead of using URLs. The system provides:
+Images are uploaded to Supabase Storage via a server-side endpoint that bypasses Row-Level Security (RLS). The system provides:
 - Drag-and-drop interface
 - File validation (type and size)
 - Upload progress indication
 - Image preview
 - Easy removal
+- **No RLS configuration needed** - uploads work automatically!
 
 ## Setup
 
 The Supabase storage bucket (`portfolio-uploads`) is automatically initialized when the app loads.
+
+**Important:** Uploads use a server-side endpoint (`/make-server-79e7cc1a/upload`) that uses the service role key, so you don't need to configure RLS policies or disable RLS.
 
 ## Using the ImageUpload Component
 

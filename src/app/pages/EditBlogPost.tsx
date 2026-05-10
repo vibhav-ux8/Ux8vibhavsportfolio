@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
-import { 
-  ArrowLeft, Save, Edit2, Check, X, Calendar, Clock, 
-  Plus, Trash2, Type, Heading2, Image as ImageIcon, 
-  Music, Video, ChevronUp, ChevronDown, GripVertical 
+import {
+  ArrowLeft, Save, Edit2, Check, X, Calendar, Clock,
+  Plus, Trash2, Type, Heading2, Image as ImageIcon,
+  Music, Video, ChevronUp, ChevronDown, GripVertical
 } from "lucide-react";
 import { blogPosts, BlogPost, ContentBlock } from "../data/blog";
+import { ImageUpload } from "../components/ImageUpload";
 
 export default function EditBlogPost() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function EditBlogPost() {
     }
     if (!originalPost) {
       alert("Blog post not found!");
-      navigate("/admin/dashboard");
+      navigate("/blog");
     }
   }, [navigate, originalPost]);
 
@@ -103,7 +104,7 @@ export default function EditBlogPost() {
     };
     setPostData({
       ...postData,
-      content: [...(postData.content || []), newBlock]
+      content: [newBlock, ...(postData.content || [])]
     });
     // Automatically activate editing for the new block
     setEditingBlockId(newBlock.id);
@@ -246,19 +247,18 @@ export default function EditBlogPost() {
 
             {/* Image Block Editor */}
             {block.type === 'image' && (
-              <>
-                <input
-                  type="url"
+              <div className="space-y-3">
+                <ImageUpload
                   value={block.content}
-                  onChange={(e) => updateContentBlock(block.id, { content: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Image URL (https://...)"
+                  onChange={(url) => updateContentBlock(block.id, { content: url })}
+                  path="blog/content/"
+                  label="Upload Image"
                 />
                 <input
                   type="text"
                   value={block.metadata?.alt || ''}
-                  onChange={(e) => updateContentBlock(block.id, { 
-                    metadata: { ...block.metadata, alt: e.target.value } 
+                  onChange={(e) => updateContentBlock(block.id, {
+                    metadata: { ...block.metadata, alt: e.target.value }
                   })}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Alt text (for accessibility)"
@@ -266,16 +266,13 @@ export default function EditBlogPost() {
                 <input
                   type="text"
                   value={block.metadata?.caption || ''}
-                  onChange={(e) => updateContentBlock(block.id, { 
-                    metadata: { ...block.metadata, caption: e.target.value } 
+                  onChange={(e) => updateContentBlock(block.id, {
+                    metadata: { ...block.metadata, caption: e.target.value }
                   })}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Caption (optional)"
                 />
-                {block.content && (
-                  <img src={block.content} alt={block.metadata?.alt || ''} className="w-full rounded-lg mt-2" />
-                )}
-              </>
+              </div>
             )}
 
             {/* Audio Block Editor */}
@@ -435,11 +432,11 @@ export default function EditBlogPost() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => navigate("/admin/dashboard")}
+              onClick={() => navigate("/blog")}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              Back to Dashboard
+              Back to Blog
             </button>
 
             <div className="flex items-center gap-3">
@@ -482,18 +479,13 @@ export default function EditBlogPost() {
               {editingField === "image" ? (
                 <div className="absolute inset-0 bg-background/95 p-4 z-10">
                   <div className="h-full flex flex-col">
-                    <label className="block text-sm font-medium mb-2">Image URL</label>
-                    <input
-                      type="url"
+                    <ImageUpload
                       value={postData.image}
-                      onChange={(e) =>
-                        setPostData({ ...postData, image: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-4"
-                      placeholder="https://images.unsplash.com/..."
-                      autoFocus
+                      onChange={(url) => setPostData({ ...postData, image: url })}
+                      path="blog/featured/"
+                      label="Featured Image"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mt-4">
                       <button
                         onClick={() => setEditingField(null)}
                         className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors"

@@ -1,14 +1,16 @@
 import { Link, useLocation } from "react-router";
-import { Menu, X, Eye, EyeOff } from "lucide-react";
+import { Menu, X, Eye, EyeOff, Moon, Sun } from "lucide-react";
 import { House, UserCircle, Briefcase, PenNib, EnvelopeSimple } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import logoImage from "figma:asset/d817f10c5a8dcea24cbac0c933d18bd131f71370.png";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 export function Navigation() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const { isAdminView, toggleAdminView } = useAdminView();
+  const { theme, toggleTheme } = useTheme();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Check login status
@@ -95,6 +97,20 @@ export function Navigation() {
                 </span>
               </button>
             )}
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex flex-col items-center gap-1.5 transition-all duration-300 group text-muted-foreground hover:text-foreground"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              <div className="transition-all duration-300 group-hover:scale-105">
+                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+              </div>
+              <span className="text-[13px] tracking-[0.01em] transition-all duration-300 font-normal">
+                {theme === 'light' ? 'Dark' : 'Light'}
+              </span>
+            </button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -146,6 +162,20 @@ export function Navigation() {
                   <span>{isAdminView ? "Admin View" : "Public View"}</span>
                 </button>
               )}
+
+              {/* Theme Toggle (Mobile) */}
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  setIsOpen(false);
+                }}
+                className="flex items-center gap-3 text-base transition-colors text-muted-foreground"
+              >
+                <div className="text-muted-foreground/70">
+                  {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
+                </div>
+                <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+              </button>
             </div>
           </div>
         )}

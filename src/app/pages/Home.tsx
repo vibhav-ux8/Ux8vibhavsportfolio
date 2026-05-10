@@ -12,6 +12,29 @@ import { useAdminView } from "../contexts/AdminViewContext";
 
 export default function Home() {
   const { isAdminView } = useAdminView();
+  const logoRef = useRef<HTMLImageElement>(null);
+
+  // Set initial logo color and update on theme changes
+  useEffect(() => {
+    const updateLogoColor = () => {
+      if (logoRef.current && !logoRef.current.matches(':hover')) {
+        const isDark = document.documentElement.classList.contains('dark');
+        logoRef.current.style.filter = isDark ? 'brightness(0) invert(1)' : 'brightness(0)';
+      }
+    };
+
+    // Set initial color
+    updateLogoColor();
+
+    const observer = new MutationObserver(updateLogoColor);
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Load CMS data from localStorage
   const [cmsData, setCmsData] = useState<any>({
@@ -264,8 +287,15 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div className="min-h-screen bg-background relative">
+      {/* Grain texture overlay - dark mode only */}
+      <div className="hidden dark:block fixed inset-0 pointer-events-none opacity-[0.015] z-0" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'repeat',
+        mixBlendMode: 'overlay'
+      }} />
+      <div className="relative z-10">
+        <Navigation />
 
       {/* PANEL 1: HERO - ELEVATED & DYNAMIC */}
       <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-20 overflow-hidden">
@@ -307,12 +337,40 @@ export default function Home() {
             <motion.div
               variants={fadeInScale}
               transition={{ duration: 0.8 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 1.05 }}
               className="mb-6"
             >
-              <img
+              <motion.img
+                ref={logoRef}
                 src={logoImage}
                 alt="UX8"
-                className="h-28 md:h-36 lg:h-44 w-auto mx-auto"
+                className="h-28 md:h-36 lg:h-44 w-auto mx-auto cursor-pointer hero-logo"
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                style={{ transition: 'filter 0.8s ease-in-out' }}
+                onMouseEnter={(e) => {
+                  const pastelColors = [
+                    'brightness(0) saturate(100%) invert(74%) sepia(15%) saturate(1566%) hue-rotate(190deg) brightness(95%) contrast(90%)', // pastel blue
+                    'brightness(0) saturate(100%) invert(85%) sepia(25%) saturate(652%) hue-rotate(85deg) brightness(95%) contrast(88%)', // pastel green
+                    'brightness(0) saturate(100%) invert(75%) sepia(35%) saturate(845%) hue-rotate(320deg) brightness(100%) contrast(92%)', // pastel orange
+                    'brightness(0) saturate(100%) invert(70%) sepia(25%) saturate(1245%) hue-rotate(240deg) brightness(95%) contrast(90%)', // pastel purple
+                    'brightness(0) saturate(100%) invert(75%) sepia(30%) saturate(956%) hue-rotate(310deg) brightness(98%) contrast(88%)', // pastel red/pink
+                  ];
+
+                  const randomColor = pastelColors[Math.floor(Math.random() * pastelColors.length)];
+
+                  // Delay color change until logo has popped up
+                  setTimeout(() => {
+                    if ((e.target as HTMLImageElement).matches(':hover')) {
+                      (e.target as HTMLImageElement).style.filter = randomColor;
+                    }
+                  }, 350);
+                }}
+                onMouseLeave={(e) => {
+                  const isDark = document.documentElement.classList.contains('dark');
+                  // Smoothly fade back to default color
+                  (e.target as HTMLImageElement).style.filter = isDark ? 'brightness(0) invert(1)' : 'brightness(0)';
+                }}
               />
             </motion.div>
 
@@ -427,7 +485,7 @@ export default function Home() {
                         />
 
                         {/* Inner circle with flickering icons */}
-                        <div className="absolute inset-2 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                        <div className="absolute inset-2 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
                           {/* First icon */}
                           <motion.div
                             animate={{
@@ -521,7 +579,7 @@ export default function Home() {
                       <div className="relative z-10 bg-background border-2 border-border rounded-2xl p-6 hover:border-primary/50 transition-all duration-300">
                         <motion.div
                           whileHover={{ scale: 1.1 }}
-                          className="inline-flex items-center justify-center w-12 h-12 bg-gray-200 rounded-full mb-4 text-foreground font-bold text-base shadow-sm"
+                          className="inline-flex items-center justify-center w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-full mb-4 text-foreground font-bold text-base shadow-sm"
                         >
                           {step.number}
                         </motion.div>
@@ -925,6 +983,7 @@ export default function Home() {
       )}
 
       <Footer />
+      </div>
     </div>
   );
 }

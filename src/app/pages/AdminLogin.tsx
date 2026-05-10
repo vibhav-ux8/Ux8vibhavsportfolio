@@ -17,6 +17,10 @@ export default function AdminLogin() {
       localStorage.setItem("isAdminAuthenticated", "true");
       localStorage.setItem("isAdminLoggedIn", "true");
       localStorage.setItem("adminViewEnabled", "true");
+
+      // Trigger custom event to notify context of login
+      window.dispatchEvent(new Event('adminLoginChange'));
+
       navigate("/");
     } else {
       setError("Invalid credentials. Please try again.");

@@ -27,19 +27,36 @@ export function AdminViewProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("adminViewEnabled", String(value));
   };
 
-  // Listen for login/logout changes
+  // Re-check admin status on mount and when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
+    const checkAdminStatus = () => {
       const isLoggedIn = localStorage.getItem("isAdminLoggedIn") === "true";
-      if (!isLoggedIn) {
-        setIsAdminView(false);
-        localStorage.removeItem("adminViewEnabled");
+      const adminViewEnabled = localStorage.getItem("adminViewEnabled") === "true";
+      const shouldBeAdmin = isLoggedIn && adminViewEnabled;
+
+      if (shouldBeAdmin !== isAdminView) {
+        setIsAdminView(shouldBeAdmin);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    // Check on mount
+    checkAdminStatus();
+
+    // Check when localStorage changes (works across tabs)
+    window.addEventListener('storage', checkAdminStatus);
+
+    // Check on custom login event
+    window.addEventListener('adminLoginChange', checkAdminStatus);
+
+    // Also check on visibility change (when user returns to tab)
+    document.addEventListener('visibilitychange', checkAdminStatus);
+
+    return () => {
+      window.removeEventListener('storage', checkAdminStatus);
+      window.removeEventListener('adminLoginChange', checkAdminStatus);
+      document.removeEventListener('visibilitychange', checkAdminStatus);
+    };
+  }, [isAdminView]);
 
   return (
     <AdminViewContext.Provider value={{ isAdminView, toggleAdminView, setAdminView }}>

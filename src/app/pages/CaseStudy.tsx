@@ -1,10 +1,14 @@
 import { useParams, Link, Navigate } from "react-router";
 import { getProjectById } from "../data/projects";
-import { ArrowLeft, ArrowUp, Layers, ThumbsUp, Heart, Mail } from "lucide-react";
+import { ArrowLeft, ArrowUp, Layers, ThumbsUp, Heart, Mail, Save, Type, Image as ImageIcon, Video, Trash2, Upload } from "lucide-react";
 import { ArrowsOut, ArrowsIn, CaretLeft, CaretRight, Plus, Minus } from "@phosphor-icons/react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
+import { EditableText } from "../components/EditableText";
+import { EditableImage } from "../components/EditableImage";
+import { ImageUpload } from "../components/ImageUpload";
+import { useAdminView } from "../contexts/AdminViewContext";
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
 import predictArchitecture from "figma:asset/9d537f5cc6573164bde668097537f5d4460a2997.png";
@@ -64,7 +68,7 @@ const CustomNextArrow = (props: any) => {
 
 export default function CaseStudy() {
   const { id } = useParams<{ id: string }>();
-  const project = id ? getProjectById(id) : undefined;
+  const { isAdminView } = useAdminView();
 
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("cover");
@@ -79,6 +83,205 @@ export default function CaseStudy() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+
+  // Reload project data whenever id changes to ensure fresh data after edits
+  const [project, setProject] = useState(id ? getProjectById(id) : undefined);
+  const [editableProject, setEditableProject] = useState(project);
+
+  // Reload project data when ID changes
+  useEffect(() => {
+    console.log("CaseStudy: Loading project for id:", id);
+    const freshProject = id ? getProjectById(id) : undefined;
+    console.log("CaseStudy: Loaded project data:", freshProject);
+    setProject(freshProject);
+    setEditableProject(freshProject);
+  }, [id]);
+
+  // Save changes to localStorage
+  const handleSaveChanges = () => {
+    if (!project || !editableProject) return;
+
+    const existingProjects = localStorage.getItem("cmsProjectsData");
+    const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
+    projectsData[project.id] = editableProject;
+    localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
+
+    alert("Changes saved successfully! Refresh the page to see updates.");
+  };
+
+  const handlePublish = () => {
+    if (!project || !editableProject) return;
+
+    // First save the changes
+    const existingProjects = localStorage.getItem("cmsProjectsData");
+    const projectsData = existingProjects ? JSON.parse(existingProjects) : {};
+    projectsData[project.id] = editableProject;
+    localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
+
+    // Mark as published
+    const updatedProject = { ...editableProject, published: true, publishedAt: new Date().toISOString() };
+    projectsData[project.id] = updatedProject;
+    localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
+
+    alert("Project published successfully! Refresh the page to see updates.");
+  };
+
+  const updateProjectField = (field: string, value: any) => {
+    setEditableProject((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const updateCarouselImage = (index: number, newUrl: string) => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === "context") {
+        const carouselBlockId = `context-carousel-${index + 1}`;
+        return {
+          ...section,
+          content: section.content.map((block: any) =>
+            block.id === carouselBlockId ? { ...block, content: newUrl } : block
+          ),
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
+
+  const deleteCarouselImage = (index: number) => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === "context") {
+        const carouselBlockId = `context-carousel-${index + 1}`;
+        return {
+          ...section,
+          content: section.content.map((block: any) =>
+            block.id === carouselBlockId ? { ...block, content: "" } : block
+          ),
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
+
+  const updateLongImage = (newUrl: string) => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === "context") {
+        return {
+          ...section,
+          content: section.content.map((block: any) =>
+            block.id === "context-long-image" ? { ...block, content: newUrl } : block
+          ),
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
+
+  const deleteLongImage = () => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === "context") {
+        return {
+          ...section,
+          content: section.content.map((block: any) =>
+            block.id === "context-long-image" ? { ...block, content: "" } : block
+          ),
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
+
+  const addContentBlock = (sectionId: string, type: "text" | "image" | "video") => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          content: [
+            ...section.content,
+            {
+              id: `${sectionId}-${type}-${Date.now()}`,
+              type,
+              content: "",
+              caption: type === "image" || type === "video" ? "" : undefined,
+            },
+          ],
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
+
+  const deleteContentBlock = (sectionId: string, blockId: string) => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          content: section.content.filter((block: any) => block.id !== blockId),
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
+
+  const updateSectionContent = (sectionId: string, blockId: string, newContent: string) => {
+    if (!editableProject?.sectionsData) return;
+
+    const updatedSections = editableProject.sectionsData.map((section: any) => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          content: section.content.map((block: any) =>
+            block.id === blockId ? { ...block, content: newContent } : block
+          ),
+        };
+      }
+      return section;
+    });
+
+    setEditableProject((prev: any) => ({
+      ...prev,
+      sectionsData: updatedSections,
+    }));
+  };
 
   // Load custom sections data from CMS if available
   const sectionsData = (project as any)?.sectionsData;
@@ -106,16 +309,16 @@ export default function CaseStudy() {
         const longImageBlock = contextSection.content.find((c: any) => c.id === "context-long-image");
         const longImage = longImageBlock?.content || "";
 
-        if (carouselImages.length > 0 || longImage) {
-          return {
-            carouselImages: carouselImages.length > 0 ? carouselImages : [predictContextImage],
-            longImage: longImage || storyImage
-          };
-        }
+        // Return custom images if available, otherwise return empty
+        return {
+          carouselImages: carouselImages,
+          longImage: longImage
+        };
       }
     }
 
-    // Fall back to default image map
+    // Only use default images for the original 3 projects (Predict, Immune, Kavach)
+    // All new projects will have no default images
     const imageMap: Record<string, { carouselImages: string[], longImage: string }> = {
       "ai-assisted-decision-platform": {
         carouselImages: [predictContextImage, storyImage1, storyImage2, storyImage3],
@@ -136,104 +339,13 @@ export default function CaseStudy() {
           "https://images.unsplash.com/photo-1559236790-4e54e81fa3c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx6ZXJvJTIwdHJ1c3QlMjBhcmNoaXRlY3R1cmV8ZW58MXx8fHwxNzczOTAyNzMzfDA&ixlib=rb-4.1.0&q=80&w=1080"
         ],
         longImage: "https://images.unsplash.com/photo-1660836814985-8523a0d713b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjeWJlcnNlY3VyaXR5JTIwbmV0d29yayUyMHZlcnRpY2FsfGVufDF8fHx8MTc3MzkwMjc1NXww&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "manav": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1634743556192-d19f0c69ff3a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxIUiUyMHRlY2hub2xvZ3klMjBkYXNoYm9hcmR8ZW58MXx8fHwxNzczOTAyNzM0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1763736809695-b92e4db67472?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbXBsb3llZSUyMG1hbmFnZW1lbnQlMjBzeXN0ZW18ZW58MXx8fHwxNzczOTAyNzM0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1561480337-03eb1b6795a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b3JrZm9yY2UlMjBhbmFseXRpY3N8ZW58MXx8fHwxNzczOTAyNzM1fDA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1759663176274-6d3fa700b87a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYXclMjBlbmZvcmNlbWVudCUyMGFuYWx5c2lzJTIwbG9uZ3xlbnwxfHx8fDE3NzM5MDI3NTR8MA&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "data-visualization-platform": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1723307061004-6e2e087deae1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnZW9zcGF0aWFsJTIwaW50ZWxsaWdlbmNlJTIwbWFwfGVufDF8fHx8MTc3MzkwMjczNXww&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1618847207931-c05e836bbdb5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHJhdGVnaWMlMjBhbmFseXNpcyUyMGdsb2JlfGVufDF8fHx8MTc3MzkwMjczNnww&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1688287632190-071ae4b3a129?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzaXR1YXRpb25hbCUyMGF3YXJlbmVzcyUyMGNvbW1hbmR8ZW58MXx8fHwxNzczOTAyNzM2fDA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1598255417985-3f503fc36f0e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnZW9zcGF0aWFsJTIwbWFwJTIwdmVydGljYWx8ZW58MXx8fHwxNzczOTAyNzU2fDA&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "public-benefits-application": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1711655371218-7888ff2c6b75?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3aWxkbGlmZSUyMGNvbnNlcnZhdGlvbiUyMGZvcmVzdHxlbnwxfHx8fDE3NzM4MjQ5NDV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1771746924362-dabd71478eff?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb3Jlc3QlMjBtYW5hZ2VtZW50JTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NzM5MDI3MzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1744835289606-6ee518cea962?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxodW1hbiUyMHdpbGRsaWZlJTIwY29uZmxpY3R8ZW58MXx8fHwxNzczOTAyNzM3fDA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1637267415513-2f06aae5bec6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb3Jlc3QlMjBsYW5kc2NhcGUlMjB2ZXJ0aWNhbHxlbnwxfHx8fDE3NzM5MDI3NTZ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-        },
-      "enterprise-analytics-dashboard": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1708794666324-85ad91989d20?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZ3JpY3VsdHVyZSUyMHRlY2hub2xvZ3klMjBhZHZpc29yeXxlbnwxfHx8fDE3NzM5MDI3Mzd8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1708794666324-85ad91989d20?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzbWFydCUyMGZhcm1pbmclMjBBSXxlbnwxfHx8fDE3NzM5MDI3Mzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1762609020059-4b9b0c4c03d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWF0aGVyJTIwZm9yZWNhc3QlMjBhZ3JpY3VsdHVyZXxlbnwxfHx8fDE3NzM5MDI3Mzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1702896779536-1c44a8d3e390?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZ3JpY3VsdHVyZSUyMGZpZWxkJTIwdmVydGljYWx8ZW58MXx8fHwxNzczOTAyNzU2fDA&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "ai-content-moderation": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1653136952516-f1362d7df156?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGluZGlhbiUyMHRpbWVrZWVwaW5nfGVufDF8fHx8MTc3MzkwMjczOXww&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1707057538324-40d244e86e17?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2ZWRpYyUyMGFzdHJvbm9teSUyMHZpc3VhbGl6YXRpb258ZW58MXx8fHwxNzczOTAyNzM5fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1631034339032-fb4566a49f01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYXclMjBlbmZvcmNlbWVudCUyMHRlY2hub2xvZ3klMjBhbmFseXNpc3xlbnwxfHx8fDE3NzM5MDI3MzB8MA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1562164914-f71b2835e86b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhbmNpZW50JTIwbWFudXNjcmlwdCUyMHZlcnRpY2FsfGVufDF8fHx8MTc3MzkwMjc1N3ww&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "gupt": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1722254111234-512dfa9d749c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBjcnlwdG9ncmFwaHklMjBhbmNpZW50fGVufDF8fHx8MTc3MzkwMjc0NHww&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1721378466934-68c57d15a6c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaXBoZXIlMjBlbmNvZGluZyUyMHN5bWJvbHN8ZW58MXx8fHwxNzczOTAyNzQ0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1557853197-aefb550b6fdc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcnlwdG9ncmFwaGljJTIwcGF0dGVybnN8ZW58MXx8fHwxNzczOTAyNzQ0fDA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1562164914-f71b2835e86b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhbmNpZW50JTIwbWFudXNjcmlwdCUyMHZlcnRpY2FsfGVufDF8fHx8MTc3MzkwMjc1N3ww&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "kashi": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1763875018677-544233f257e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxib2FyZCUyMGdhbWUlMjBkZXNpZ258ZW58MXx8fHwxNzczOTAyNzQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1593442808882-775dfcd90699?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBwaGlsb3NvcGh5JTIwbGVhcm5pbmd8ZW58MXx8fHwxNzczOTAyNzQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1771588330614-2ce1d77588ca?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGdhbWUlMjBwaWVjZXN8ZW58MXx8fHwxNzczOTAyNzQ2fDA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1733652403334-6e119ac614d2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxib2FyZCUyMGdhbWUlMjB2ZXJ0aWNhbHxlbnwxfHx8fDE3NzM5MDI3NTd8MA&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "srujanalaya": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1762330467151-7f009206db90?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwc3Rvcnl0ZWxsaW5nJTIwcGxhdGZvcm18ZW58MXx8fHwxNzczOTAyNzQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1670940830924-496d7dc998ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBzYWNyZWQlMjBhcnR8ZW58MXx8fHwxNzczOTAyNzQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1729370638927-1be1101d092e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGljb25vZ3JhcGh5JTIwZGlnaXRhbHxlbnwxfHx8fDE3NzM5MDI3NDZ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1771500873216-b23571c710dc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwYXJ0JTIwdmVydGljYWx8ZW58MXx8fHwxNzczOTAyNzU4fDA&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "pravaha": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1725483733130-97bdc5250726?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaGFybWljJTIwZGVzaWduJTIwcGhpbG9zb3BoeXxlbnwxfHx8fDE3NzM5MDI3NDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1593442808882-775dfcd90699?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbmRpYyUyMGtub3dsZWRnZSUyMHBlZGFnb2d5fGVufDF8fHx8MTc3MzkwMjc0OHww&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1765572144265-8f7a7e1c8b14?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGluZGlhbiUyMHdpc2RvbXxlbnwxfHx8fDE3NzM5MDI3NDh8MA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1562164914-f71b2835e86b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhbmNpZW50JTIwbWFudXNjcmlwdCUyMHZlcnRpY2FsfGVufDF8fHx8MTc3MzkwMjc1N3ww&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "education-learning-platform": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1762330917056-e69b34329ddf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbmxpbmUlMjBlZHVjYXRpb24lMjBwbGF0Zm9ybXxlbnwxfHx8fDE3NzM4NDA0NTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1758270704534-fd9715bffc0e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwbGVhcm5pbmclMjBzdHVkZW50c3xlbnwxfHx8fDE3NzM4Mzc3MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1759884247381-d7222dd72dec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZW1vdGUlMjBlZHVjYXRpb24lMjB0ZWNobm9sb2d5fGVufDF8fHx8MTc3MzkwMjc0OXww&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1759663176274-6d3fa700b87a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYXclMjBlbmZvcmNlbWVudCUyMGFuYWx5c2lzJTIwbG9uZ3xlbnwxfHx8fDE3NzM5MDI3NTR8MA&ixlib=rb-4.1.0&q=80&w=1080"
-      },
-      "fintech-mobile-banking": {
-        carouselImages: [
-          "https://images.unsplash.com/photo-1681826291722-70bd7e9e6fc3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2JpbGUlMjBiYW5raW5nJTIwYXBwfGVufDF8fHx8MTc3MzkwMjc1MHww&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1561525155-40a650192479?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaW5hbmNpYWwlMjB0ZWNobm9sb2d5JTIwc21hcnRwaG9uZXxlbnwxfHx8fDE3NzM5MDI3NTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-          "https://images.unsplash.com/photo-1612351978641-ecdafe9caaa5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWdpdGFsJTIwcGF5bWVudHMlMjB1bmRlcmJhbmtlZHxlbnwxfHx8fDE3NzM5MDI3NTB8MA&ixlib=rb-4.1.0&q=80&w=1080"
-        ],
-        longImage: "https://images.unsplash.com/photo-1660836814985-8523a0d713b5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjeWJlcnNlY3VyaXR5JTIwbmV0d29yayUyMHZlcnRpY2FsfGVufDF8fHx8MTc3MzkwMjc1NXww&ixlib=rb-4.1.0&q=80&w=1080"
       }
     };
 
+    // Return empty arrays for projects not in the imageMap (new projects)
     return imageMap[projectId || ""] || {
-      carouselImages: [
-        "https://images.unsplash.com/photo-1631034339032-fb4566a49f01?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYXclMjBlbmZvcmNlbWVudCUyMHRlY2hub2xvZ3klMjBhbmFseXNpc3xlbnwxfHx8fDE3NzM5MDI3MzB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-        "https://images.unsplash.com/photo-1675627453084-505806a00406?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjeWJlcnNlY3VyaXR5JTIwbW9uaXRvcmluZyUyMGRhc2hib2FyZHxlbnwxfHx8fDE3NzM4NTgxMzB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-        "https://images.unsplash.com/photo-1495055154266-57bbdeada43e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2NpYWwlMjBtZWRpYSUyMGludGVsbGlnZW5jZXxlbnwxfHx8fDE3NzM5MDI3MzF8MA&ixlib=rb-4.1.0&q=80&w=1080"
-      ],
-      longImage: "https://images.unsplash.com/photo-1691435828932-911a7801adfb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+      carouselImages: [],
+      longImage: ""
     };
   };
 
@@ -385,6 +497,21 @@ export default function CaseStudy() {
     return <Navigate to="/projects" replace />;
   }
 
+  // Redirect if project is archived and user is not in admin view
+  if (project.archived === true && !isAdminView) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <h1 className="text-4xl font-medium mb-4">Project Archived</h1>
+          <p className="text-muted-foreground mb-6">This project has been archived and is no longer publicly available.</p>
+          <a href="/work" className="text-primary hover:underline">
+            View all projects
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -405,10 +532,13 @@ export default function CaseStudy() {
             {/* Background Image with Overlay */}
             <div className="relative min-h-[85vh] flex items-end">
               <div className="absolute inset-0">
-                <ImageWithFallback
-                  src={project.thumbnail}
-                  alt={project.title}
+                <EditableImage editable={false}
+                  src={editableProject?.coverImage || (project as any)?.coverImage || editableProject?.thumbnail || project.thumbnail}
+                  alt={editableProject?.title || project.title}
                   className="w-full h-full object-cover"
+                  onReplace={(newUrl) => updateProjectField("coverImage", newUrl)}
+                  onDelete={() => updateProjectField("coverImage", "")}
+                  uploadPath="projects/covers/"
                 />
                 {/* Multi-layer gradient for depth */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
@@ -430,26 +560,36 @@ export default function CaseStudy() {
                   </motion.div>
                   
                   {/* Title */}
-                  <motion.h1 
+                  <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-[44px] md:text-[64px] lg:text-[80px] xl:text-[96px] font-medium leading-[1.05] tracking-[-0.04em] flex-1 text-white drop-shadow-2xl"
-                    style={{ fontFeatureSettings: "'ss01' on" }}
+                    className="flex-1"
                   >
-                    {project.title}
-                  </motion.h1>
+                    <EditableText editable={false}
+                      value={editableProject?.title || ""}
+                      onChange={(value) => updateProjectField("title", value)}
+                      className="text-[44px] md:text-[64px] lg:text-[80px] xl:text-[96px] font-medium leading-[1.05] tracking-[-0.04em] text-white drop-shadow-2xl"
+                      as="h1"
+                    />
+                  </motion.div>
                 </div>
 
                 {/* Description */}
-                <motion.p 
+                <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-[19px] md:text-[22px] lg:text-[26px] text-white/90 leading-[1.39] tracking-[-0.018em] max-w-4xl mb-12 drop-shadow-lg font-light"
+                  className="max-w-4xl mb-12"
                 >
-                  {project.description}
-                </motion.p>
+                  <EditableText editable={false}
+                    value={editableProject?.description || ""}
+                    onChange={(value) => updateProjectField("description", value)}
+                    className="text-[19px] md:text-[22px] lg:text-[26px] text-white/90 leading-[1.39] tracking-[-0.018em] drop-shadow-lg font-light"
+                    multiline
+                    rows={3}
+                  />
+                </motion.div>
 
                 {/* Tags */}
                 <motion.div 
@@ -476,7 +616,7 @@ export default function CaseStudy() {
                 </motion.div>
 
                 {/* Metadata - Enhanced Design */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -484,15 +624,29 @@ export default function CaseStudy() {
                 >
                   <div className="space-y-2">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-white/50 font-bold">Category</p>
-                    <p className="text-[22px] md:text-[24px] font-semibold tracking-[-0.02em] text-white">{project.category}</p>
+                    <EditableText editable={false}
+                      value={editableProject?.category || ""}
+                      onChange={(value) => updateProjectField("category", value)}
+                      className="text-[22px] md:text-[24px] font-semibold tracking-[-0.02em] text-white"
+                    />
                   </div>
                   <div className="space-y-2">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-white/50 font-bold">Year</p>
-                    <p className="text-[22px] md:text-[24px] font-semibold tracking-[-0.02em] text-white">{project.year}</p>
+                    <EditableText editable={false}
+                      value={editableProject?.year || ""}
+                      onChange={(value) => updateProjectField("year", value)}
+                      className="text-[22px] md:text-[24px] font-semibold tracking-[-0.02em] text-white"
+                    />
                   </div>
                   <div className="space-y-2 max-w-md">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-white/50 font-bold">Role</p>
-                    <p className="text-[22px] md:text-[24px] font-semibold tracking-[-0.02em] text-white leading-tight">{project.role}</p>
+                    <EditableText editable={false}
+                      value={editableProject?.role || ""}
+                      onChange={(value) => updateProjectField("role", value)}
+                      className="text-[22px] md:text-[24px] font-semibold tracking-[-0.02em] text-white leading-tight"
+                      multiline
+                      rows={2}
+                    />
                   </div>
                 </motion.div>
               </div>
@@ -503,7 +657,7 @@ export default function CaseStudy() {
         {/* Content Sections - Refined Layout */}
         <div className="max-w-[1400px] mx-auto">
           {/* Mobile Sticky Index - Fixed below hero */}
-          <div className="lg:hidden sticky top-20 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+          <div className="lg:hidden sticky top-20 z-[60] bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm pointer-events-auto">
             <div className="px-6 py-3">
               <div className="grid grid-cols-5 gap-x-6 gap-y-3.5 mb-2.5">
                 <a
@@ -649,165 +803,165 @@ export default function CaseStudy() {
                   Contents
                 </h4>
                 <nav className="space-y-1 border-l-[1.5px] border-border/20">
-                  <a 
-                    href="#cover" 
+                  <a
+                    href="#cover"
                     onClick={(e) => handleNavClick(e, "cover")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "cover" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "cover"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "cover" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "cover"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>00</span>
-                    <span className="leading-[1.35] transition-all duration-250">Cover</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.cover || "Cover"}</span>
                   </a>
-                  <a 
-                    href="#context" 
+                  <a
+                    href="#context"
                     onClick={(e) => handleNavClick(e, "context")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "context" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "context"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "context" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "context"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>01</span>
-                    <span className="leading-[1.35] transition-all duration-250">Context</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.context || "Context"}</span>
                   </a>
-                  <a 
-                    href="#product-vision" 
+                  <a
+                    href="#product-vision"
                     onClick={(e) => handleNavClick(e, "product-vision")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "product-vision" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "product-vision"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "product-vision" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "product-vision"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>02</span>
-                    <span className="leading-[1.35] transition-all duration-250">Product Vision</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["product-vision"] || "Product Vision"}</span>
                   </a>
-                  <a 
-                    href="#user-research" 
+                  <a
+                    href="#user-research"
                     onClick={(e) => handleNavClick(e, "user-research")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "user-research" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "user-research"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "user-research" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "user-research"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>03</span>
-                    <span className="leading-[1.35] transition-all duration-250">User Research</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["user-research"] || "User Research"}</span>
                   </a>
-                  <a 
-                    href="#design-direction" 
+                  <a
+                    href="#design-direction"
                     onClick={(e) => handleNavClick(e, "design-direction")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "design-direction" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "design-direction"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "design-direction" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "design-direction"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>04</span>
-                    <span className="leading-[1.35] transition-all duration-250">Design Direction</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["design-direction"] || "Design Direction"}</span>
                   </a>
-                  <a 
-                    href="#methods-processes" 
+                  <a
+                    href="#methods-processes"
                     onClick={(e) => handleNavClick(e, "methods-processes")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "methods-processes" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "methods-processes"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "methods-processes" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "methods-processes"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>05</span>
-                    <span className="leading-[1.35] transition-all duration-250">Methods & Processes</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["methods-processes"] || "Methods & Processes"}</span>
                   </a>
-                  <a 
-                    href="#design-deliverables" 
+                  <a
+                    href="#design-deliverables"
                     onClick={(e) => handleNavClick(e, "design-deliverables")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "design-deliverables" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "design-deliverables"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "design-deliverables" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "design-deliverables"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>06</span>
-                    <span className="leading-[1.35] transition-all duration-250">Design Deliverables</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["design-deliverables"] || "Design Deliverables"}</span>
                   </a>
-                  <a 
-                    href="#analysis-impact" 
+                  <a
+                    href="#analysis-impact"
                     onClick={(e) => handleNavClick(e, "analysis-impact")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "analysis-impact" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "analysis-impact"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "analysis-impact" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "analysis-impact"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>07</span>
-                    <span className="leading-[1.35] transition-all duration-250">Analysis & Impact</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["analysis-impact"] || "Analysis & Impact"}</span>
                   </a>
-                  <a 
-                    href="#future-scope" 
+                  <a
+                    href="#future-scope"
                     onClick={(e) => handleNavClick(e, "future-scope")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "future-scope" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "future-scope"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "future-scope" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "future-scope"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>08</span>
-                    <span className="leading-[1.35] transition-all duration-250">Future Scope</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.["future-scope"] || "Future Scope"}</span>
                   </a>
-                  <a 
-                    href="#credits" 
+                  <a
+                    href="#credits"
                     onClick={(e) => handleNavClick(e, "credits")}
                     className={`group flex items-baseline gap-3.5 py-3.5 pl-5 text-[14.5px] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[-0.012em] border-l-[2.5px] -ml-[1.5px] cursor-pointer ${
-                      activeSection === "credits" 
-                        ? "border-primary text-foreground font-medium" 
+                      activeSection === "credits"
+                        ? "border-primary text-foreground font-medium"
                         : "border-transparent text-muted-foreground/65 hover:text-foreground/95 hover:border-primary/50 hover:pl-6 hover:font-medium"
                     }`}
                   >
                     <span className={`text-[14.5px] font-bold transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.03em] tabular-nums ${
-                      activeSection === "credits" 
-                        ? "text-primary scale-110 translate-x-0.5" 
+                      activeSection === "credits"
+                        ? "text-primary scale-110 translate-x-0.5"
                         : "text-muted-foreground/45 group-hover:text-primary/90 group-hover:scale-110"
                     }`}>09</span>
-                    <span className="leading-[1.35] transition-all duration-250">Credits</span>
+                    <span className="leading-[1.35] transition-all duration-250">{editableProject?.sectionTitles?.credits || "Credits"}</span>
                   </a>
                 </nav>
               </div>
@@ -817,7 +971,7 @@ export default function CaseStudy() {
             <div className="col-span-12 lg:col-span-9 lg:col-start-4 px-6 md:px-0">
               
               {/* Context Section */}
-              <motion.section 
+              <motion.section
                 id="context"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -825,25 +979,65 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    01
-                  </h2>
-                  <h3 
-                    onClick={() => setActiveSection("context")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Context
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      01
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.context || "Context"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            context: value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("context", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("context", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("context", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                  {project.context}
-                </p>
+                <div className="max-w-[75ch] mb-12">
+                  <EditableText editable={false}
+                    value={editableProject?.context || ""}
+                    onChange={(value) => updateProjectField("context", value)}
+                    className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased"
+                    multiline
+                    rows={6}
+                  />
+                </div>
 
-                {/* Carousel for Story Images */}
-                <>
-                  {/* Carousel for Story Images */}
+                {/* Carousel for Story Images - Only show if there are carousel images */}
+                {carouselImages.length > 0 && (
+                  <>
                     <motion.div
                       initial={{ opacity: 0, y: 40 }}
                       whileInView={{ opacity: 1, y: 0 }}
@@ -1004,11 +1198,13 @@ export default function CaseStudy() {
                           {carouselImages.map((image, index) => (
                             <div key={index}>
                               <div className="relative w-full h-full">
-                                <img 
-                                  src={image} 
+                                <EditableImage editable={false}
+                                  src={image}
                                   alt={`Story image ${index + 1}`}
                                   className="w-full h-full block select-none"
-                                  draggable="false"
+                                  onReplace={(newUrl) => updateCarouselImage(index, newUrl)}
+                                  onDelete={() => deleteCarouselImage(index)}
+                                  uploadPath="projects/context/carousel/"
                                 />
                               </div>
                             </div>
@@ -1016,8 +1212,10 @@ export default function CaseStudy() {
                         </Slider>
                       </div>
                     </motion.div>
+                  </>
+                )}
 
-{(getSectionContent("context", "context-para-1") || getSectionContent("context", "context-para-2") || getSectionContent("context", "context-para-3")) && (
+                    {(getSectionContent("context", "context-para-1") || getSectionContent("context", "context-para-2") || getSectionContent("context", "context-para-3")) && (
                       <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -1027,77 +1225,208 @@ export default function CaseStudy() {
                       >
                         {getSectionContent("context", "context-para-1") && (
                           <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                            {getSectionContent("context", "context-para-1", "Our design approach emphasized creating a cohesive user experience that seamlessly integrated complex workflows into intuitive interfaces. Through extensive user research and iterative prototyping, we developed interaction patterns that reduced cognitive load while maintaining the depth of functionality required by power users.")}
+                            {getSectionContent("context", "context-para-1", "")}
                           </p>
                         )}
 
                         {getSectionContent("context", "context-para-2") && (
                           <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                            {getSectionContent("context", "context-para-2", "The visual language we established balanced professional aesthetics with accessibility considerations, ensuring that the interface remained approachable for diverse user groups. Strategic use of white space, typography, and subtle animations created a sense of clarity and refinement throughout the product experience.")}
+                            {getSectionContent("context", "context-para-2", "")}
                           </p>
                         )}
 
                         {getSectionContent("context", "context-para-3") && (
                           <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                            {getSectionContent("context", "context-para-3", "Cross-functional collaboration played a crucial role in translating stakeholder requirements into design solutions that addressed real user needs. Regular design reviews and usability testing sessions ensured alignment between business objectives, technical constraints, and user expectations throughout the development process.")}
+                            {getSectionContent("context", "context-para-3", "")}
                           </p>
                         )}
                       </motion.div>
                     )}
 
-                    {/* Second Story Image */}
-                    <motion.figure
-                      initial={{ opacity: 0, y: 40 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-120px" }}
-                      transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                      className="mt-16 group -mx-6 md:mx-0"
-                    >
-                      <div className="relative overflow-hidden">
-                        {/* Maximize Button - Same as Carousel */}
-                        <motion.button
-                          onClick={() => {
-                            setFullscreenImage(longImage);
-                            setIsCarouselFullscreen(false);
-                            setIsFullscreen(true);
-                          }}
-                          initial={{ opacity: 0 }}
-                          whileInView={{ opacity: 1 }}
-                          viewport={{ once: true }}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                          className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
-                          aria-label="View fullscreen"
-                        >
-                          <motion.div
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.9 }}
-                            transition={{ duration: 0.2 }}
+                    {/* Second Story Image - Only show if longImage exists */}
+                    {longImage && (
+                      <motion.figure
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-120px" }}
+                        transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="mt-16 group -mx-6 md:mx-0"
+                      >
+                        <div className="relative overflow-hidden">
+                          {/* Maximize Button - Same as Carousel */}
+                          <motion.button
+                            onClick={() => {
+                              setFullscreenImage(longImage);
+                              setIsCarouselFullscreen(false);
+                              setIsFullscreen(true);
+                            }}
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                            className="absolute top-2 md:top-3 right-2 md:right-3 z-40 w-11 h-11 md:w-12 md:h-12 flex items-center justify-center rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 opacity-0 group-hover:opacity-100"
+                            aria-label="View fullscreen"
                           >
-                            <ArrowsOut 
-                              size={18} 
-                              weight="bold"
-                              className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" 
+                            <motion.div
+                              whileHover={{ scale: 1.15 }}
+                              whileTap={{ scale: 0.9 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ArrowsOut
+                                size={18}
+                                weight="bold"
+                                className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                              />
+                            </motion.div>
+                          </motion.button>
+
+                          <motion.div
+                            whileHover={{ scale: 1.01 }}
+                            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                            className="md:rounded-2xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.05),0_10px_40px_-10px_rgba(0,0,0,0.15)] md:border md:border-black/[0.06]"
+                          >
+                            <EditableImage editable={false}
+                              src={longImage}
+                              alt="Context section image"
+                              className="w-full h-auto block select-none"
+                              onReplace={updateLongImage}
+                              onDelete={deleteLongImage}
+                              uploadPath="projects/context/"
                             />
                           </motion.div>
-                        </motion.button>
+                        </div>
+                      </motion.figure>
+                    )}
 
-                        <motion.div
-                          whileHover={{ scale: 1.01 }}
-                          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                          className="md:rounded-2xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.05),0_10px_40px_-10px_rgba(0,0,0,0.15)] md:border md:border-black/[0.06]"
-                        >
-                          <img 
-                            src={longImage} 
-                            alt="Story section visual"
-                            className="w-full h-auto block select-none"
-                            draggable="false"
-                          />
-                        </motion.div>
-                      </div>
-                    </motion.figure>
-                  </>
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "context")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["context-para-1", "context-para-2", "context-para-3", "context-carousel-1", "context-carousel-2", "context-carousel-3", "context-carousel-4", "context-long-image"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("context", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("context", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("context", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("context", block.id, url)}
+                                    path={`projects/context/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("context", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("context", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
               </motion.section>
 
               {/* Research Section */}
@@ -1109,27 +1438,67 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    02
-                  </h2>
-                  <h3 
-                    onClick={() => setActiveSection("product-vision")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Product Vision
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      02
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['product-vision'] || "Product Vision"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'product-vision': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("product-vision", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("product-vision", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("product-vision", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-{project.research && (
-                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {project.research}
-                  </p>
+{(editableProject?.research || isAdminView) && (
+                  <div className="max-w-[75ch] mb-12">
+                    <EditableText editable={false}
+                      value={editableProject?.research || ""}
+                      onChange={(value) => updateProjectField("research", value)}
+                      className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased"
+                      multiline
+                      rows={6}
+                    />
+                  </div>
                 )}
 
                 {getSectionContent("product-vision", "vision-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("product-vision", "vision-para-1", "Our vision centered on creating a cohesive ecosystem that would empower users to make informed decisions. Through extensive stakeholder interviews and user research, we identified key pain points and opportunities for innovation. The product strategy focused on scalability, accessibility, and seamless integration with existing workflows.")}
+                    {getSectionContent("product-vision", "vision-para-1", "")}
                   </p>
                 )}
 
@@ -1182,7 +1551,7 @@ export default function CaseStudy() {
 
 {getSectionContent("product-vision", "vision-para-2") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("product-vision", "vision-para-2", "We established clear principles that would guide all design decisions: prioritize user needs, maintain consistency across touchpoints, and ensure every interaction adds value. The roadmap was structured around iterative releases, allowing us to validate assumptions and incorporate feedback continuously.")}
+                    {getSectionContent("product-vision", "vision-para-2", "")}
                   </p>
                 )}
 
@@ -1235,8 +1604,136 @@ export default function CaseStudy() {
 
 {getSectionContent("product-vision", "vision-para-3") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                    {getSectionContent("product-vision", "vision-para-3", "By aligning cross-functional teams around shared objectives and success metrics, we created a foundation for sustainable growth. The vision emphasized long-term impact over short-term gains, ensuring that every feature contributed to the broader product narrative and user value proposition.")}
+                    {getSectionContent("product-vision", "vision-para-3", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "product-vision")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["vision-para-1", "vision-image-1", "vision-para-2", "vision-image-2", "vision-para-3"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("product-vision", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("product-vision", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("product-vision", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("product-vision", block.id, url)}
+                                    path={`projects/product-vision/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("product-vision", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("product-vision", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1249,28 +1746,196 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    03
-                  </h2>
-                  <h3 
-                    onClick={() => setActiveSection("user-research")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    User Research
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      03
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['user-research'] || "User Research"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'user-research': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("user-research", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("user-research", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("user-research", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-{project.research && (
-                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {project.research}
-                  </p>
+{(editableProject?.research || isAdminView) && (
+                  <div className="max-w-[75ch] mb-12">
+                    <EditableText editable={false}
+                      value={editableProject?.research || ""}
+                      onChange={(value) => updateProjectField("research", value)}
+                      className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased"
+                      multiline
+                      rows={6}
+                    />
+                  </div>
                 )}
 
                 {getSectionContent("user-research", "research-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("user-research", "research-para-1", "Our research methodology combined qualitative and quantitative approaches, ensuring comprehensive insights into user needs and behaviors. Through extensive stakeholder interviews and usability testing, we identified key pain points and opportunities for innovation.")}
+                    {getSectionContent("user-research", "research-para-1", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "user-research")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["research-para-1"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("user-research", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("user-research", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("user-research", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("user-research", block.id, url)}
+                                    path={`projects/user-research/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("user-research", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("user-research", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1283,27 +1948,67 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    04
-                  </h2>
-                  <h3 
-                    onClick={() => setActiveSection("design-direction")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]" 
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Design Direction
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      04
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['design-direction'] || "Design Direction"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'design-direction': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("design-direction", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("design-direction", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("design-direction", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-{project.designSystem && (
-                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {project.designSystem}
-                  </p>
+{(editableProject?.designSystem || isAdminView) && (
+                  <div className="max-w-[75ch] mb-12">
+                    <EditableText editable={false}
+                      value={editableProject?.designSystem || ""}
+                      onChange={(value) => updateProjectField("designSystem", value)}
+                      className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased"
+                      multiline
+                      rows={6}
+                    />
+                  </div>
                 )}
 
                 {getSectionContent("design-direction", "direction-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("design-direction", "direction-para-1", "The design direction was rooted in clarity and purpose. We explored various visual languages, testing different approaches with users to understand which resonated most effectively. Every element was intentionally crafted to support the user's journey while maintaining brand consistency.")}
+                    {getSectionContent("design-direction", "direction-para-1", "")}
                   </p>
                 )}
 
@@ -1356,7 +2061,7 @@ export default function CaseStudy() {
 
 {getSectionContent("design-direction", "direction-para-2") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("design-direction", "direction-para-2", "Typography, color, and spatial relationships were carefully considered to create a harmonious system. We established a comprehensive design language that could scale across platforms while maintaining coherence. Accessibility was built into the foundation, ensuring inclusive experiences for all users.")}
+                    {getSectionContent("design-direction", "direction-para-2", "")}
                   </p>
                 )}
 
@@ -1409,8 +2114,136 @@ export default function CaseStudy() {
 
 {getSectionContent("design-direction", "direction-para-3") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                    {getSectionContent("design-direction", "direction-para-3", "Through iterative refinement and close collaboration with development teams, we ensured the design direction was both aspirational and achievable. The result was a flexible framework that empowered teams to create consistent, high-quality experiences efficiently.")}
+                    {getSectionContent("design-direction", "direction-para-3", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "design-direction")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["direction-para-1", "direction-image-1", "direction-para-2", "direction-image-2", "direction-para-3"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("design-direction", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("design-direction", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("design-direction", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("design-direction", block.id, url)}
+                                    path={`projects/design-direction/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("design-direction", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("design-direction", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1462,40 +2295,208 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    05
-                  </h2>
-                  <h3
-                    onClick={() => setActiveSection("methods-processes")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Methods & Processes
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      05
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['methods-processes'] || "Methods & Processes"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'methods-processes': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("methods-processes", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("methods-processes", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("methods-processes", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-{getSectionContent("methods-processes", "methods-text-main", project.prototyping) && (
-                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("methods-processes", "methods-text-main", project.prototyping)}
-                  </p>
+{(editableProject?.prototyping || isAdminView) && (
+                  <div className="max-w-[75ch] mb-12">
+                    <EditableText editable={false}
+                      value={editableProject?.prototyping || ""}
+                      onChange={(value) => updateProjectField("prototyping", value)}
+                      className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased"
+                      multiline
+                      rows={6}
+                    />
+                  </div>
                 )}
 
                 {getSectionContent("methods-processes", "methods-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("methods-processes", "methods-para-1", "Our methodology combined lean UX principles with design thinking frameworks. We facilitated collaborative workshops that brought together diverse perspectives, ensuring alignment across stakeholders. Rapid prototyping enabled us to test concepts early and often, reducing risk and accelerating learning.")}
+                    {getSectionContent("methods-processes", "methods-para-1", "")}
                   </p>
                 )}
 
                 {getSectionContent("methods-processes", "methods-para-2") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("methods-processes", "methods-para-2", "User research formed the backbone of our process. Through interviews, usability testing, and analytics analysis, we gathered actionable insights that informed every decision. Cross-functional rituals ensured transparent communication and continuous alignment throughout the product lifecycle.")}
+                    {getSectionContent("methods-processes", "methods-para-2", "")}
                   </p>
                 )}
 
                 {getSectionContent("methods-processes", "methods-para-3") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                    {getSectionContent("methods-processes", "methods-para-3", "By establishing clear rituals and documentation practices, we created a sustainable workflow that supported both speed and quality. The process remained flexible enough to adapt to emerging needs while maintaining the rigor necessary for delivering exceptional experiences.")}
+                    {getSectionContent("methods-processes", "methods-para-3", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "methods-processes")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["methods-para-1", "methods-para-2", "methods-para-3"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("methods-processes", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("methods-processes", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("methods-processes", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("methods-processes", block.id, url)}
+                                    path={`projects/methods-processes/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("methods-processes", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("methods-processes", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1508,34 +2509,196 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    06
-                  </h2>
-                  <h3
-                    onClick={() => setActiveSection("design-deliverables")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Design Deliverables
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      06
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['design-deliverables'] || "Design Deliverables"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'design-deliverables': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("design-deliverables", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("design-deliverables", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("design-deliverables", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 {getSectionContent("design-deliverables", "deliverables-text-main") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("design-deliverables", "deliverables-text-main", "Comprehensive design documentation including component libraries, style guides, interaction specifications, and prototype files. All deliverables were structured to support seamless handoff and ongoing maintenance.")}
+                    {getSectionContent("design-deliverables", "deliverables-text-main", "")}
                   </p>
                 )}
 
                 {getSectionContent("design-deliverables", "deliverables-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("design-deliverables", "deliverables-para-1", "Interactive prototypes validated design decisions and facilitated stakeholder alignment. High-fidelity mockups demonstrated visual refinement, while detailed specifications ensured engineering teams had the information needed for accurate implementation.")}
+                    {getSectionContent("design-deliverables", "deliverables-para-1", "")}
                   </p>
                 )}
 
                 {getSectionContent("design-deliverables", "deliverables-para-2") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                    {getSectionContent("design-deliverables", "deliverables-para-2", "Regular documentation reviews and updates kept the system relevant as the product matured. We fostered a culture of contribution where team members could propose improvements, ensuring the documentation remained valuable and reflective of current practices.")}
+                    {getSectionContent("design-deliverables", "deliverables-para-2", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "design-deliverables")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["deliverables-text-main", "deliverables-para-1", "deliverables-para-2"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("design-deliverables", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("design-deliverables", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("design-deliverables", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("design-deliverables", block.id, url)}
+                                    path={`projects/design-deliverables/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("design-deliverables", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("design-deliverables", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1548,34 +2711,202 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    07
-                  </h2>
-                  <h3
-                    onClick={() => setActiveSection("analysis-impact")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Analysis & Impact
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      07
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['analysis-impact'] || "Analysis & Impact"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'analysis-impact': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("analysis-impact", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("analysis-impact", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("analysis-impact", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-{getSectionContent("analysis-impact", "impact-text-main", project.outcome) && (
-                  <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("analysis-impact", "impact-text-main", project.outcome)}
-                  </p>
+{(editableProject?.outcome || isAdminView) && (
+                  <div className="max-w-[75ch] mb-12">
+                    <EditableText editable={false}
+                      value={editableProject?.outcome || ""}
+                      onChange={(value) => updateProjectField("outcome", value)}
+                      className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased"
+                      multiline
+                      rows={6}
+                    />
+                  </div>
                 )}
 
                 {getSectionContent("analysis-impact", "impact-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("analysis-impact", "impact-para-1", "Success metrics were tracked across user satisfaction, task completion rates, and business outcomes. Post-launch analysis revealed significant improvements in key performance indicators, validating our design approach and informing future iterations.")}
+                    {getSectionContent("analysis-impact", "impact-para-1", "")}
                   </p>
                 )}
 
                 {getSectionContent("analysis-impact", "impact-para-2") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                    {getSectionContent("analysis-impact", "impact-para-2", "Long-term analysis showed sustained improvements in user engagement and business outcomes. The foundation we built enabled rapid iteration on new features while maintaining quality standards. This project demonstrated how thoughtful design creates compounding value over time.")}
+                    {getSectionContent("analysis-impact", "impact-para-2", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "analysis-impact")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["impact-para-1", "impact-para-2"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("analysis-impact", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("analysis-impact", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("analysis-impact", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("analysis-impact", block.id, url)}
+                                    path={`projects/analysis-impact/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("analysis-impact", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("analysis-impact", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1588,34 +2919,196 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    08
-                  </h2>
-                  <h3
-                    onClick={() => setActiveSection("future-scope")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Future Scope
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      08
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['future-scope'] || "Future Scope"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'future-scope': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("future-scope", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("future-scope", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("future-scope", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 {getSectionContent("future-scope", "future-text-main") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("future-scope", "future-text-main", "Future enhancements will focus on expanding platform capabilities, introducing advanced personalization features, and further optimizing performance. Ongoing user research continues to inform our product roadmap and design evolution.")}
+                    {getSectionContent("future-scope", "future-text-main", "")}
                   </p>
                 )}
 
                 {getSectionContent("future-scope", "future-para-1") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased mb-12">
-                    {getSectionContent("future-scope", "future-para-1", "We envision a system that adapts intelligently to user contexts, proactively addressing needs before they arise. Continued investment in accessibility, performance, and scalability will ensure the platform remains best-in-class as user needs evolve.")}
+                    {getSectionContent("future-scope", "future-para-1", "")}
                   </p>
                 )}
 
                 {getSectionContent("future-scope", "future-para-2") && (
                   <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] max-w-[75ch] font-light antialiased">
-                    {getSectionContent("future-scope", "future-para-2", "Expanding into new platforms and channels will require thoughtful adaptation of our design system. We're exploring how to maintain consistency while respecting the unique constraints and opportunities of each context. User research continues to inform our prioritization and strategic direction. The next phase focuses on deepening engagement and expanding reach, using data and feedback to evolve the experience while remaining open to unexpected opportunities.")}
+                    {getSectionContent("future-scope", "future-para-2", "")}
                   </p>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "future-scope")
+                      ?.content.filter(
+                        (block: any) =>
+                          !["future-text-main", "future-para-1", "future-para-2"].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("future-scope", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("future-scope", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("future-scope", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("future-scope", block.id, url)}
+                                    path={`projects/future-scope/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("future-scope", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("future-scope", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1628,17 +3121,51 @@ export default function CaseStudy() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="mb-32 scroll-mt-52 lg:scroll-mt-32"
               >
-                <div className="mb-10">
-                  <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
-                    09
-                  </h2>
-                  <h3
-                    onClick={() => setActiveSection("credits")}
-                    className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
-                    style={{ fontFeatureSettings: "'ss01' on, 'liga' on" }}
-                  >
-                    Credits
-                  </h3>
+                <div className="mb-10 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-[14.5px] font-bold tracking-[-0.016em] tabular-nums text-muted-foreground/65 mb-3">
+                      09
+                    </h2>
+                    <EditableText editable={false}
+                      value={editableProject?.sectionTitles?.['credits'] || "Credits"}
+                      onChange={(value) => {
+                        setEditableProject((prev: any) => ({
+                          ...prev,
+                          sectionTitles: {
+                            ...prev?.sectionTitles,
+                            'credits': value
+                          }
+                        }));
+                      }}
+                      className="text-[36px] md:text-[44px] font-medium tracking-[-0.028em] leading-[1.12] cursor-pointer hover:text-primary transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] will-change-[color]"
+                      as="h3"
+                    />
+                  </div>
+                  {isAdminView && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => addContentBlock("credits", "text")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Text Block"
+                      >
+                        <Type className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("credits", "image")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Image Block"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => addContentBlock("credits", "video")}
+                        className="p-2 hover:bg-muted/50 rounded-lg transition-colors border border-border/50"
+                        title="Add Video Block"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Display all credits content blocks */}
@@ -1689,6 +3216,134 @@ export default function CaseStudy() {
                       </p>
                     </div>
                   </>
+                )}
+
+                {/* Dynamic Content Blocks */}
+                {editableProject?.sectionsData && (
+                  <div className="mt-16 space-y-6">
+                    {editableProject.sectionsData
+                      .find((s: any) => s.id === "credits")
+                      ?.content.filter(
+                        (block: any) =>
+                          ![].includes(block.id) && block.content
+                      )
+                      .map((block: any) => (
+                        <div key={block.id}>
+                          {/* Admin View - Editable */}
+                          {isAdminView && (
+                            <div className="group relative bg-muted/20 border border-border/50 rounded-xl p-6">
+                              {block.type === "text" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Text Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("credits", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={block.content}
+                                    onChange={(e) =>
+                                      updateSectionContent("credits", block.id, e.target.value)
+                                    }
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                    placeholder="Enter text content..."
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "image" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Image Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("credits", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <ImageUpload
+                                    value={block.content}
+                                    onChange={(url) => updateSectionContent("credits", block.id, url)}
+                                    path={`projects/credits/`}
+                                    label="Drop image here"
+                                  />
+                                </div>
+                              )}
+
+                              {block.type === "video" && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs text-muted-foreground font-medium">Video Block</label>
+                                    <button
+                                      onClick={() => deleteContentBlock("credits", block.id)}
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    type="url"
+                                    value={block.content}
+                                    onChange={(e) => updateSectionContent("credits", block.id, e.target.value)}
+                                    placeholder="YouTube or Vimeo URL"
+                                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Public View - Read-only */}
+                          {!isAdminView && (
+                            <div>
+                              {block.type === "text" && (
+                                <p className="text-[19px] md:text-[21px] text-foreground/88 leading-[1.65] tracking-[-0.016em] font-light antialiased whitespace-pre-wrap">
+                                  {block.content}
+                                </p>
+                              )}
+
+                              {block.type === "image" && (
+                                <motion.figure
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="group"
+                                >
+                                  <div className="relative overflow-hidden rounded-xl">
+                                    <img src={block.content} alt="" className="w-full h-auto" />
+                                  </div>
+                                </motion.figure>
+                              )}
+
+                              {block.type === "video" && block.content && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 30 }}
+                                  whileInView={{ opacity: 1, y: 0 }}
+                                  viewport={{ once: true }}
+                                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                  className="relative rounded-xl overflow-hidden"
+                                  style={{ paddingBottom: "56.25%" }}
+                                >
+                                  <iframe
+                                    src={block.content.includes("youtube") ? block.content.replace("watch?v=", "embed/") : block.content}
+                                    className="absolute top-0 left-0 w-full h-full"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                </motion.div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
                 )}
               </motion.section>
 
@@ -1793,27 +3448,30 @@ export default function CaseStudy() {
         </div>
       </div>
 
+
       {/* Scroll to Top Button */}
-      <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ 
-          opacity: showScrollTop ? 1 : 0,
-          scale: showScrollTop ? 1 : 0.8,
-          y: showScrollTop ? 0 : 20
-        }}
-        transition={{ 
-          duration: 0.4,
-          ease: [0.4, 0, 0.2, 1]
-        }}
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={scrollToTop}
-        className="fixed bottom-10 right-10 z-40 bg-foreground/95 hover:bg-foreground text-background p-4 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer backdrop-blur-sm"
-        style={{ pointerEvents: showScrollTop ? 'auto' : 'none' }}
-        aria-label="Scroll to top"
-      >
-        <ArrowUp size={20} strokeWidth={2.5} />
-      </motion.button>
+      {!isAdminView && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{
+            opacity: showScrollTop ? 1 : 0,
+            scale: showScrollTop ? 1 : 0.8,
+            y: showScrollTop ? 0 : 20
+          }}
+          transition={{
+            duration: 0.4,
+            ease: [0.4, 0, 0.2, 1]
+          }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={scrollToTop}
+          className="fixed bottom-10 right-10 z-40 bg-foreground/95 hover:bg-foreground text-background p-4 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer backdrop-blur-sm"
+          style={{ pointerEvents: showScrollTop ? 'auto' : 'none' }}
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={20} strokeWidth={2.5} />
+        </motion.button>
+      )}
 
       {/* Fullscreen Image Modal */}
       <AnimatePresence>

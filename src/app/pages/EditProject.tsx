@@ -12,9 +12,12 @@ import {
   X,
   Plus,
   ArrowUp,
-  Eye
+  Eye,
+  CheckCircle,
+  ArrowLeft
 } from "lucide-react";
-import { getProjectById } from "../data/projects";
+import { getProjectById, deleteProject } from "../data/projects";
+import { ImageUpload } from "../components/ImageUpload";
 
 interface ContentBlock {
   id: string;
@@ -37,6 +40,8 @@ export default function EditProject() {
   const [activeSection, setActiveSection] = useState<string>("cover");
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
+  const [editingSectionTitle, setEditingSectionTitle] = useState<string | null>(null);
+  const [sectionTitleValue, setSectionTitleValue] = useState("");
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("isAdminAuthenticated");
@@ -45,7 +50,7 @@ export default function EditProject() {
     }
     if (!project) {
       alert("Project not found!");
-      navigate("/admin/dashboard");
+      navigate("/work");
     }
   }, [navigate, project]);
 
@@ -57,110 +62,61 @@ export default function EditProject() {
       return (project as any).sectionsData;
     }
 
-    // Otherwise initialize with default structure
+    // Otherwise initialize with empty sections - no dummy content
     return [
     {
       id: "cover",
       name: "00 Cover",
       content: [
-        { id: "cover-title", type: "text", content: project?.title || "" },
-        { id: "cover-desc", type: "text", content: project?.description || "" },
-        { id: "cover-thumb", type: "image", content: project?.thumbnail || "", caption: "Project thumbnail" },
-        { id: "cover-logo", type: "image", content: project?.logoOverlay || "", caption: "Logo overlay" },
+        { id: "cover-hero", type: "image", content: "", caption: "" },
+        { id: "cover-thumb", type: "image", content: "", caption: "" },
+        { id: "cover-logo", type: "image", content: "", caption: "" },
       ],
     },
     {
       id: "context",
       name: "01 Context",
-      content: [
-        { id: "context-text-main", type: "text", content: project?.context || "" },
-        { id: "context-carousel-1", type: "image", content: "", caption: "Carousel image 1" },
-        { id: "context-carousel-2", type: "image", content: "", caption: "Carousel image 2" },
-        { id: "context-carousel-3", type: "image", content: "", caption: "Carousel image 3" },
-        { id: "context-carousel-4", type: "image", content: "", caption: "Carousel image 4" },
-        { id: "context-para-1", type: "text", content: "Our design approach emphasized creating a cohesive user experience that seamlessly integrated complex workflows into intuitive interfaces. Through extensive user research and iterative prototyping, we developed interaction patterns that reduced cognitive load while maintaining the depth of functionality required by power users." },
-        { id: "context-para-2", type: "text", content: "The visual language we established balanced professional aesthetics with accessibility considerations, ensuring that the interface remained approachable for diverse user groups. Strategic use of white space, typography, and subtle animations created a sense of clarity and refinement throughout the product experience." },
-        { id: "context-para-3", type: "text", content: "Cross-functional collaboration played a crucial role in translating stakeholder requirements into design solutions that addressed real user needs. Regular design reviews and usability testing sessions ensured alignment between business objectives, technical constraints, and user expectations throughout the development process." },
-        { id: "context-long-image", type: "image", content: "", caption: "Long form story image" },
-      ],
+      content: [],
     },
     {
       id: "product-vision",
       name: "02 Product Vision",
-      content: [
-        { id: "vision-text-main", type: "text", content: project?.research || "" },
-        { id: "vision-para-1", type: "text", content: "Our vision centered on creating a cohesive ecosystem that would empower users to make informed decisions. Through extensive stakeholder interviews and user research, we identified key pain points and opportunities for innovation. The product strategy focused on scalability, accessibility, and seamless integration with existing workflows." },
-        { id: "vision-image-1", type: "image", content: "", caption: "Early strategic alignment sessions defining core product principles" },
-        { id: "vision-para-2", type: "text", content: "We established clear principles that would guide all design decisions: prioritize user needs, maintain consistency across touchpoints, and ensure every interaction adds value. The roadmap was structured around iterative releases, allowing us to validate assumptions and incorporate feedback continuously." },
-        { id: "vision-image-2", type: "image", content: "", caption: "Product roadmap visualization showing phased rollout" },
-        { id: "vision-para-3", type: "text", content: "By aligning cross-functional teams around shared objectives and success metrics, we created a foundation for sustainable growth. The vision emphasized long-term impact over short-term gains, ensuring that every feature contributed to the broader product narrative and user value proposition." },
-      ],
+      content: [],
     },
     {
       id: "user-research",
       name: "03 User Research",
-      content: [
-        { id: "research-text-main", type: "text", content: project?.research || "" },
-        { id: "research-para-1", type: "text", content: "Our research methodology combined qualitative and quantitative approaches, ensuring comprehensive insights into user needs and behaviors. Through extensive stakeholder interviews and usability testing, we identified key pain points and opportunities for innovation." },
-      ],
+      content: [],
     },
     {
       id: "design-direction",
       name: "04 Design Direction",
-      content: [
-        { id: "direction-text-main", type: "text", content: project?.designSystem || "" },
-        { id: "direction-para-1", type: "text", content: "The design direction was rooted in clarity and purpose. We explored various visual languages, testing different approaches with users to understand which resonated most effectively. Every element was intentionally crafted to support the user's journey while maintaining brand consistency." },
-        { id: "direction-image-1", type: "image", content: "", caption: "Visual exploration showcasing typography hierarchy and color palette" },
-        { id: "direction-para-2", type: "text", content: "Typography, color, and spatial relationships were carefully considered to create a harmonious system. We established a comprehensive design language that could scale across platforms while maintaining coherence. Accessibility was built into the foundation, ensuring inclusive experiences for all users." },
-        { id: "direction-image-2", type: "image", content: "", caption: "Component library and interaction patterns" },
-        { id: "direction-para-3", type: "text", content: "The direction extended beyond visual aesthetics to encompass motion design and micro-interactions. Subtle animations guided users through complex workflows, providing feedback and reducing uncertainty. Each interaction was designed to feel responsive and purposeful." },
-      ],
+      content: [],
     },
     {
       id: "methods-processes",
       name: "05 Methods & Processes",
-      content: [
-        { id: "methods-text-main", type: "text", content: project?.prototyping || "" },
-        { id: "methods-para-1", type: "text", content: "Our methodology combined lean UX principles with design thinking frameworks. We facilitated collaborative workshops that brought together diverse perspectives, ensuring alignment across stakeholders. Rapid prototyping enabled us to test concepts early and often, reducing risk and accelerating learning." },
-        { id: "methods-para-2", type: "text", content: "User research formed the backbone of our process. Through interviews, usability testing, and analytics analysis, we gathered actionable insights that informed every decision. Cross-functional rituals ensured transparent communication and continuous alignment throughout the product lifecycle." },
-        { id: "methods-para-3", type: "text", content: "By establishing clear rituals and documentation practices, we created a sustainable workflow that supported both speed and quality. The process remained flexible enough to adapt to emerging needs while maintaining the rigor necessary for delivering exceptional experiences." },
-      ],
+      content: [],
     },
     {
       id: "design-deliverables",
       name: "06 Design Deliverables",
-      content: [
-        { id: "deliverables-text-main", type: "text", content: "Comprehensive design documentation including component libraries, style guides, interaction specifications, and prototype files. All deliverables were structured to support seamless handoff and ongoing maintenance." },
-        { id: "deliverables-para-1", type: "text", content: "Interactive prototypes validated design decisions and facilitated stakeholder alignment. High-fidelity mockups demonstrated visual refinement, while detailed specifications ensured engineering teams had the information needed for accurate implementation." },
-        { id: "deliverables-para-2", type: "text", content: "Regular documentation reviews and updates kept the system relevant as the product matured. We fostered a culture of contribution where team members could propose improvements, ensuring the documentation remained valuable and reflective of current practices." },
-      ],
+      content: [],
     },
     {
       id: "analysis-impact",
       name: "07 Analysis & Impact",
-      content: [
-        { id: "impact-text-main", type: "text", content: project?.outcome || "" },
-        { id: "impact-para-1", type: "text", content: "Success metrics were tracked across user satisfaction, task completion rates, and business outcomes. Post-launch analysis revealed significant improvements in key performance indicators, validating our design approach and informing future iterations." },
-        { id: "impact-para-2", type: "text", content: "Long-term analysis showed sustained improvements in user engagement and business outcomes. The foundation we built enabled rapid iteration on new features while maintaining quality standards. This project demonstrated how thoughtful design creates compounding value over time." },
-      ],
+      content: [],
     },
     {
       id: "future-scope",
       name: "08 Future Scope",
-      content: [
-        { id: "future-text-main", type: "text", content: "Future enhancements will focus on expanding platform capabilities, introducing advanced personalization features, and further optimizing performance. Ongoing user research continues to inform our product roadmap and design evolution." },
-        { id: "future-para-1", type: "text", content: "We envision a system that adapts intelligently to user contexts, proactively addressing needs before they arise. Continued investment in accessibility, performance, and scalability will ensure the platform remains best-in-class as user needs evolve." },
-        { id: "future-para-2", type: "text", content: "Expanding into new platforms and channels will require thoughtful adaptation of our design system. We're exploring how to maintain consistency while respecting the unique constraints and opportunities of each context. User research continues to inform our prioritization and strategic direction. The next phase focuses on deepening engagement and expanding reach, using data and feedback to evolve the experience while remaining open to unexpected opportunities." },
-      ],
+      content: [],
     },
     {
       id: "credits",
       name: "09 Credits",
-      content: [
-        { id: "credits-role", type: "text", content: `Role: ${project?.role || ""}` },
-        { id: "credits-year", type: "text", content: `Year: ${project?.year || ""}` },
-        { id: "credits-team", type: "text", content: "Team: Collaborative effort across design, engineering, product, and stakeholder teams." },
-      ],
+      content: [],
     },
   ];
   });
@@ -168,14 +124,42 @@ export default function EditProject() {
   const [basicInfo, setBasicInfo] = useState({
     title: project?.title || "",
     description: project?.description || "",
-    category: project?.category || "",
-    sector: project?.sector || "",
+    category: Array.isArray(project?.category) ? project.category : [project?.category || ""].filter(c => c),
+    sector: Array.isArray(project?.sector) ? project.sector : [project?.sector || ""].filter(s => s),
     tags: project?.tags.join(", ") || "",
     year: project?.year || "",
     role: project?.role || "",
     thumbnail: project?.thumbnail || "",
     logoOverlay: project?.logoOverlay || "",
+    coverImage: (project as any)?.coverImage || "",
   });
+
+  // Category management
+  const [categories, setCategories] = useState([
+    "LEA & Defence",
+    "DPI & Governance",
+    "IKS & Culture",
+    "Healthcare",
+    "Services",
+    "e-commerce"
+  ]);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editCategoryValue, setEditCategoryValue] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  // Domain management
+  const [domains, setDomains] = useState([
+    "UI-UX Design",
+    "Product Design",
+    "Communication",
+    "Game Design",
+    "Digital Illustration"
+  ]);
+  const [editingDomain, setEditingDomain] = useState<string | null>(null);
+  const [editDomainValue, setEditDomainValue] = useState("");
+  const [showAddDomain, setShowAddDomain] = useState(false);
+  const [newDomainName, setNewDomainName] = useState("");
 
   // Store project images array
   const [projectImages, setProjectImages] = useState(
@@ -280,6 +264,155 @@ export default function EditProject() {
     );
   };
 
+  const updateSectionTitle = (sectionId: string, newName: string) => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? { ...section, name: newName }
+          : section
+      )
+    );
+  };
+
+  const handleEditSectionTitle = (sectionId: string, currentName: string) => {
+    setEditingSectionTitle(sectionId);
+    setSectionTitleValue(currentName);
+  };
+
+  const handleSaveSectionTitle = (sectionId: string) => {
+    if (sectionTitleValue.trim()) {
+      updateSectionTitle(sectionId, sectionTitleValue);
+    }
+    setEditingSectionTitle(null);
+    setSectionTitleValue("");
+  };
+
+  // Category management functions
+  const handleEditCategory = (category: string) => {
+    setEditingCategory(category);
+    setEditCategoryValue(category);
+  };
+
+  const handleSaveCategory = () => {
+    if (editingCategory && editCategoryValue && editCategoryValue !== editingCategory) {
+      const updatedCategories = categories.map(cat =>
+        cat === editingCategory ? editCategoryValue : cat
+      );
+      setCategories(updatedCategories);
+
+      // Update basicInfo if the edited category was selected
+      if (basicInfo.category.includes(editingCategory)) {
+        const updatedSelected = basicInfo.category.map(cat =>
+          cat === editingCategory ? editCategoryValue : cat
+        );
+        setBasicInfo({ ...basicInfo, category: updatedSelected });
+      }
+    }
+    setEditingCategory(null);
+    setEditCategoryValue("");
+  };
+
+  const handleDeleteCategory = (category: string) => {
+    if (confirm(`Are you sure you want to delete the category "${category}"?`)) {
+      setCategories(categories.filter(cat => cat !== category));
+
+      // Remove from basicInfo category if the deleted category was selected
+      if (basicInfo.category.includes(category)) {
+        setBasicInfo({
+          ...basicInfo,
+          category: basicInfo.category.filter(cat => cat !== category)
+        });
+      }
+    }
+  };
+
+  const toggleCategory = (category: string) => {
+    if (basicInfo.category.includes(category)) {
+      setBasicInfo({
+        ...basicInfo,
+        category: basicInfo.category.filter(cat => cat !== category)
+      });
+    } else {
+      setBasicInfo({
+        ...basicInfo,
+        category: [...basicInfo.category, category]
+      });
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (newCategoryName && !categories.includes(newCategoryName)) {
+      setCategories([...categories, newCategoryName]);
+      setNewCategoryName("");
+      setShowAddCategory(false);
+    } else if (categories.includes(newCategoryName)) {
+      alert("Category already exists!");
+    }
+  };
+
+  // Domain management functions
+  const handleEditDomain = (domain: string) => {
+    setEditingDomain(domain);
+    setEditDomainValue(domain);
+  };
+
+  const handleSaveDomain = () => {
+    if (editingDomain && editDomainValue && editDomainValue !== editingDomain) {
+      const updatedDomains = domains.map(dom =>
+        dom === editingDomain ? editDomainValue : dom
+      );
+      setDomains(updatedDomains);
+
+      // Update basicInfo if the edited domain was selected
+      if (basicInfo.sector.includes(editingDomain)) {
+        const updatedSelected = basicInfo.sector.map(dom =>
+          dom === editingDomain ? editDomainValue : dom
+        );
+        setBasicInfo({ ...basicInfo, sector: updatedSelected });
+      }
+    }
+    setEditingDomain(null);
+    setEditDomainValue("");
+  };
+
+  const handleDeleteDomain = (domain: string) => {
+    if (confirm(`Are you sure you want to delete the domain "${domain}"?`)) {
+      setDomains(domains.filter(dom => dom !== domain));
+
+      // Remove from basicInfo sector if the deleted domain was selected
+      if (basicInfo.sector.includes(domain)) {
+        setBasicInfo({
+          ...basicInfo,
+          sector: basicInfo.sector.filter(dom => dom !== domain)
+        });
+      }
+    }
+  };
+
+  const toggleDomain = (domain: string) => {
+    if (basicInfo.sector.includes(domain)) {
+      setBasicInfo({
+        ...basicInfo,
+        sector: basicInfo.sector.filter(dom => dom !== domain)
+      });
+    } else {
+      setBasicInfo({
+        ...basicInfo,
+        sector: [...basicInfo.sector, domain]
+      });
+    }
+  };
+
+  const handleAddDomain = () => {
+    if (newDomainName && !domains.includes(newDomainName)) {
+      setDomains([...domains, newDomainName]);
+      setNewDomainName("");
+      setShowAddDomain(false);
+    } else if (domains.includes(newDomainName)) {
+      alert("Domain already exists!");
+    }
+  };
+
   const addProjectImage = () => {
     setProjectImages([...projectImages, { url: "", caption: "" }]);
   };
@@ -307,18 +440,43 @@ export default function EditProject() {
 
   const handlePublish = () => {
     try {
-      // Extract all content from sections
+      if (!basicInfo.title || basicInfo.category.length === 0) {
+        alert("Please fill in at least the title and select at least one category before publishing.");
+        return;
+      }
+
+      // Extract all content from sections - use first text block in each section
+      const contextSection = sections.find((s) => s.id === "context");
+      const visionSection = sections.find((s) => s.id === "product-vision");
+      const directionSection = sections.find((s) => s.id === "design-direction");
+      const methodsSection = sections.find((s) => s.id === "methods-processes");
+      const impactSection = sections.find((s) => s.id === "analysis-impact");
+
+      const contextContent = contextSection?.content.find(c => c.type === "text")?.content || "";
+      const researchContent = visionSection?.content.find(c => c.type === "text")?.content || "";
+      const designSystemContent = directionSection?.content.find(c => c.type === "text")?.content || "";
+      const prototypingContent = methodsSection?.content.find(c => c.type === "text")?.content || "";
+      const outcomeContent = impactSection?.content.find(c => c.type === "text")?.content || "";
+
+      console.log("Section content extracted:", {
+        context: contextContent,
+        research: researchContent,
+        designSystem: designSystemContent,
+        prototyping: prototypingContent,
+        outcome: outcomeContent
+      });
+
       const updatedProject = {
         ...project,
         ...basicInfo,
         tags: basicInfo.tags.split(",").map((tag) => tag.trim()).filter(t => t),
 
         // Map section content back to project fields
-        context: sections.find((s) => s.id === "context")?.content.find(c => c.id === "context-text-main")?.content || "",
-        research: sections.find((s) => s.id === "product-vision")?.content.find(c => c.id === "vision-text-main")?.content || "",
-        designSystem: sections.find((s) => s.id === "design-direction")?.content.find(c => c.id === "direction-text-main")?.content || "",
-        prototyping: sections.find((s) => s.id === "methods-processes")?.content.find(c => c.id === "methods-text-main")?.content || "",
-        outcome: sections.find((s) => s.id === "analysis-impact")?.content.find(c => c.id === "impact-text-main")?.content || "",
+        context: contextContent,
+        research: researchContent,
+        designSystem: designSystemContent,
+        prototyping: prototypingContent,
+        outcome: outcomeContent,
 
         // Store sections data for custom content
         sectionsData: sections,
@@ -330,13 +488,32 @@ export default function EditProject() {
       projectsData[project!.id] = updatedProject;
       localStorage.setItem("cmsProjectsData", JSON.stringify(projectsData));
 
+      console.log("Published project data:", updatedProject);
+      console.log("All CMS projects:", projectsData);
+
+      // Verify it was saved
+      const verifyData = localStorage.getItem("cmsProjectsData");
+      console.log("Verification - data saved to localStorage:", verifyData);
+      const parsedVerify = JSON.parse(verifyData || "{}");
+      console.log("Verification - parsed project:", parsedVerify[project!.id]);
+
       alert("Project published successfully!");
 
-      // Use window.location for navigation to ensure clean page load
-      window.location.href = "/admin/dashboard";
+      // Small delay to ensure localStorage persists before redirect
+      setTimeout(() => {
+        window.location.href = "/work";
+      }, 100);
     } catch (error) {
       console.error("Error publishing project:", error);
       alert("Error publishing project. Please try again.");
+    }
+  };
+
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete "${project?.title}"?\n\nThis action cannot be undone.`)) {
+      deleteProject(project!.id);
+      alert("Project deleted successfully!");
+      window.location.href = "/work";
     }
   };
 
@@ -355,12 +532,6 @@ export default function EditProject() {
       {/* Header - Floating Style */}
       <header className="fixed top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm border border-border z-50 rounded-full shadow-lg">
         <div className="px-6 py-3 flex items-center gap-6">
-          <Link
-            to="/work"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Back to Work
-          </Link>
           <button
             onClick={handleSaveDraft}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
@@ -368,16 +539,13 @@ export default function EditProject() {
             <Save className="w-4 h-4" />
             Save Draft
           </button>
-          <div className="border-l border-border pl-6 pr-2">
-            <Link
-              to="/work"
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
-              title="View Published Projects"
-            >
-              <Eye className="w-4 h-4" />
-              <span>View Work</span>
-            </Link>
-          </div>
+          <button
+            onClick={handlePublish}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
+          >
+            <CheckCircle className="w-4 h-4" />
+            Publish Changes
+          </button>
         </div>
       </header>
 
@@ -403,7 +571,23 @@ export default function EditProject() {
       {/* Main Content */}
       <div className="pt-24 pb-32 lg:pl-64">
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-12">
-          {/* Hero Cover Section - Similar to Published */}
+          {/* Back to Work Link */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <Link
+              to="/work"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to Work
+            </Link>
+          </motion.div>
+
+          {/* Hero Cover Section */}
           <div id="cover" className="scroll-mt-32 mb-20">
             {/* Preview of hero image */}
             {basicInfo.thumbnail && (
@@ -454,33 +638,244 @@ export default function EditProject() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium mb-3 text-muted-foreground">Category</label>
-                <select
-                  value={basicInfo.category}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, category: e.target.value })}
-                  className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                >
-                  <option value="LEA & Defence">LEA & Defence</option>
-                  <option value="DPI & Governance">DPI & Governance</option>
-                  <option value="IKS & Culture">IKS & Culture</option>
-                  <option value="Healthcare">Healthcare</option>
-                  <option value="Services">Services</option>
-                  <option value="e-commerce">e-commerce</option>
-                </select>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-muted-foreground">Category</label>
+                  <button
+                    onClick={() => setShowAddCategory(true)}
+                    className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                    type="button"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add
+                  </button>
+                </div>
+                <div className="space-y-2 p-4 bg-background border border-border/60 rounded-xl max-h-[280px] overflow-y-auto">
+                  {categories.map((category) => (
+                    <div key={category} className="flex items-center justify-between group">
+                      {editingCategory === category ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editCategoryValue}
+                            onChange={(e) => setEditCategoryValue(e.target.value)}
+                            className="flex-1 px-3 py-1 text-sm border border-primary rounded-lg outline-none"
+                            autoFocus
+                            onKeyPress={(e) => e.key === "Enter" && handleSaveCategory()}
+                          />
+                          <button
+                            onClick={handleSaveCategory}
+                            className="text-green-600 hover:text-green-700"
+                            type="button"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingCategory(null);
+                              setEditCategoryValue("");
+                            }}
+                            className="text-muted-foreground hover:text-foreground"
+                            type="button"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={category}
+                              checked={basicInfo.category.includes(category)}
+                              onChange={() => toggleCategory(category)}
+                              className="w-4 h-4 border-2 border-border rounded bg-white text-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                            <span className="text-sm">{category}</span>
+                          </label>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleEditCategory(category)}
+                              className="p-1 hover:bg-muted rounded"
+                              title="Edit"
+                              type="button"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(category)}
+                              className="p-1 hover:bg-red-50 hover:text-red-600 rounded"
+                              title="Delete"
+                              type="button"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Category Modal */}
+                {showAddCategory && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-background border border-border rounded-xl p-6 max-w-md w-full mx-4"
+                    >
+                      <h3 className="text-lg font-medium mb-4">Add New Category</h3>
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Enter category name"
+                        className="w-full px-4 py-2 border border-border rounded-lg mb-4"
+                        autoFocus
+                        onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
+                      />
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => {
+                            setShowAddCategory(false);
+                            setNewCategoryName("");
+                          }}
+                          className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddCategory}
+                          className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                          type="button"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-3 text-muted-foreground">Sector</label>
-                <select
-                  value={basicInfo.sector}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, sector: e.target.value })}
-                  className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                >
-                  <option value="UI-UX Design">UI-UX Design</option>
-                  <option value="Product Design">Product Design</option>
-                  <option value="Communication">Communication</option>
-                  <option value="Game Design">Game Design</option>
-                  <option value="Digital Illustration">Digital Illustration</option>
-                </select>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-muted-foreground">Domain</label>
+                  <button
+                    onClick={() => setShowAddDomain(true)}
+                    className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                    type="button"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add
+                  </button>
+                </div>
+                <div className="space-y-2 p-4 bg-background border border-border/60 rounded-xl max-h-[280px] overflow-y-auto">
+                  {domains.map((domain) => (
+                    <div key={domain} className="flex items-center justify-between group">
+                      {editingDomain === domain ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="text"
+                            value={editDomainValue}
+                            onChange={(e) => setEditDomainValue(e.target.value)}
+                            className="flex-1 px-3 py-1 text-sm border border-primary rounded-lg outline-none"
+                            autoFocus
+                            onKeyPress={(e) => e.key === "Enter" && handleSaveDomain()}
+                          />
+                          <button
+                            onClick={handleSaveDomain}
+                            className="text-green-600 hover:text-green-700"
+                            type="button"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingDomain(null);
+                              setEditDomainValue("");
+                            }}
+                            className="text-muted-foreground hover:text-foreground"
+                            type="button"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={domain}
+                              checked={basicInfo.sector.includes(domain)}
+                              onChange={() => toggleDomain(domain)}
+                              className="w-4 h-4 border-2 border-border rounded bg-white text-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                            <span className="text-sm">{domain}</span>
+                          </label>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleEditDomain(domain)}
+                              className="p-1 hover:bg-muted rounded"
+                              title="Edit"
+                              type="button"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDomain(domain)}
+                              className="p-1 hover:bg-red-50 hover:text-red-600 rounded"
+                              title="Delete"
+                              type="button"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Domain Modal */}
+                {showAddDomain && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-background border border-border rounded-xl p-6 max-w-md w-full mx-4"
+                    >
+                      <h3 className="text-lg font-medium mb-4">Add New Domain</h3>
+                      <input
+                        type="text"
+                        value={newDomainName}
+                        onChange={(e) => setNewDomainName(e.target.value)}
+                        placeholder="Enter domain name"
+                        className="w-full px-4 py-2 border border-border rounded-lg mb-4"
+                        autoFocus
+                        onKeyPress={(e) => e.key === "Enter" && handleAddDomain()}
+                      />
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => {
+                            setShowAddDomain(false);
+                            setNewDomainName("");
+                          }}
+                          className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddDomain}
+                          className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                          type="button"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
               </div>
             </div>
             <div>
@@ -495,6 +890,16 @@ export default function EditProject() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
+                <label className="block text-sm font-medium mb-3 text-muted-foreground">Role</label>
+                <input
+                  type="text"
+                  value={basicInfo.role}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, role: e.target.value })}
+                  className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  placeholder="Lead Designer, UX Researcher"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-3 text-muted-foreground">Year</label>
                 <input
                   type="text"
@@ -504,317 +909,296 @@ export default function EditProject() {
                   placeholder="2024"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-3 text-muted-foreground">Role</label>
-                <input
-                  type="text"
-                  value={basicInfo.role}
-                  onChange={(e) => setBasicInfo({ ...basicInfo, role: e.target.value })}
-                  className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                  placeholder="Lead Product Designer"
-                />
+            </div>
+
+            {/* Cover Images */}
+            <div className="pt-6 border-t border-border/40">
+              <h3 className="text-sm font-medium mb-4 text-muted-foreground">Cover Images</h3>
+
+              {/* Cover Image (Hero Background) */}
+              <div className="mb-6">
+                <label className="block text-sm mb-2">Cover Image (Hero Background)</label>
+                <p className="text-xs text-muted-foreground mb-3">Large background image that appears behind the title and description on the project page</p>
+                <div className="max-w-2xl">
+                  <ImageUpload
+                    value={basicInfo.coverImage}
+                    onChange={(url) => setBasicInfo({ ...basicInfo, coverImage: url })}
+                    path="projects/covers/"
+                    label="Drop cover image (recommended: 1920x1080 or larger)"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm mb-2">Thumbnail Image</label>
+                  <div className="max-w-sm">
+                    <ImageUpload
+                      value={basicInfo.thumbnail}
+                      onChange={(url) => setBasicInfo({ ...basicInfo, thumbnail: url })}
+                      path="projects/thumbnails/"
+                      label="Drop thumbnail image"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-2">Logo Overlay (Optional)</label>
+                  <div className="max-w-xs">
+                    <ImageUpload
+                      value={basicInfo.logoOverlay}
+                      onChange={(url) => setBasicInfo({ ...basicInfo, logoOverlay: url })}
+                      path="projects/logos/"
+                      label="Drop logo overlay"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-3 text-muted-foreground">Thumbnail Image URL</label>
-              <input
-                type="text"
-                value={basicInfo.thumbnail}
-                onChange={(e) => setBasicInfo({ ...basicInfo, thumbnail: e.target.value })}
-                className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none font-mono text-sm"
-                placeholder="figma:asset/... or https://..."
-              />
-              {basicInfo.thumbnail && (
-                <div className="mt-3 rounded-lg overflow-hidden border border-border/60">
-                  <img src={basicInfo.thumbnail} alt="Thumbnail preview" className="w-full h-32 object-cover" />
+          </div>
+        </div>
+          </div>
+
+          {/* Project Gallery */}
+          <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5 }}
+          className="scroll-mt-32 mb-20"
+        >
+          <div className="bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50 rounded-2xl p-8 md:p-10 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-8 bg-primary rounded-full" />
+                <h2 className="text-2xl font-medium">Project Gallery</h2>
+              </div>
+              <button
+                onClick={addProjectImage}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Image
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {projectImages.map((img, index) => (
+                <div key={index} className="group relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs text-muted-foreground">Gallery Image {index + 1}</label>
+                    <button
+                      onClick={() => deleteProjectImage(index)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <ImageUpload
+                    value={img.url}
+                    onChange={(url) => updateProjectImage(index, "url", url)}
+                    path="projects/gallery/"
+                    label="Drop gallery image"
+                  />
+                  <input
+                    type="text"
+                    value={img.caption}
+                    onChange={(e) => updateProjectImage(index, "caption", e.target.value)}
+                    placeholder="Image caption (optional)"
+                    className="mt-2 w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  />
+                </div>
+              ))}
+              {projectImages.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No gallery images yet. Click "Add Image" to get started.</p>
                 </div>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-3 text-muted-foreground">Logo Overlay URL</label>
-              <input
-                type="text"
-                value={basicInfo.logoOverlay}
-                onChange={(e) => setBasicInfo({ ...basicInfo, logoOverlay: e.target.value })}
-                className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none font-mono text-sm"
-                placeholder="figma:asset/... or https://..."
-              />
-              {basicInfo.logoOverlay && (
-                <div className="mt-3 rounded-lg overflow-hidden border border-border/60 bg-muted/30 p-4">
-                  <img src={basicInfo.logoOverlay} alt="Logo preview" className="w-24 h-24 object-contain" />
+          </div>
+        </motion.div>
+
+        {/* Content Sections */}
+        {sections.filter(s => s.id !== "cover").map((section, sectionIndex) => (
+          <motion.div
+            key={section.id}
+            id={section.id}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5, delay: sectionIndex * 0.1 }}
+            className="scroll-mt-32 mb-20"
+          >
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50 rounded-2xl p-8 md:p-10 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-1 h-8 bg-primary rounded-full" />
+                  {editingSectionTitle === section.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={sectionTitleValue}
+                        onChange={(e) => setSectionTitleValue(e.target.value)}
+                        className="text-2xl font-medium px-3 py-1 border-2 border-primary rounded-lg outline-none flex-1"
+                        autoFocus
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            handleSaveSectionTitle(section.id);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleSaveSectionTitle(section.id)}
+                        className="p-2 text-green-600 hover:text-green-700"
+                        type="button"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingSectionTitle(null);
+                          setSectionTitleValue("");
+                        }}
+                        className="p-2 text-muted-foreground hover:text-foreground"
+                        type="button"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <h2
+                      className="text-2xl font-medium cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => handleEditSectionTitle(section.id, section.name)}
+                    >
+                      {section.name}
+                    </h2>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-          </div>
-        </div>
-
-        {/* Project Images Gallery */}
-        <div className="mb-20 bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50 rounded-2xl p-8 md:p-10 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-8 bg-primary rounded-full" />
-              <h2 className="text-2xl font-medium">Project Images Gallery</h2>
-            </div>
-            <button
-              onClick={addProjectImage}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-all shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Add Image
-            </button>
-          </div>
-          <div className="space-y-6">
-            {projectImages.map((img, index) => (
-              <div key={index} className="bg-background border border-border/60 rounded-xl p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Image {index + 1}</span>
+                <div className="flex gap-2">
                   <button
-                    onClick={() => deleteProjectImage(index)}
-                    className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={() => addContentBlock(section.id, "text")}
+                    className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                    title="Add Text"
                   >
-                    <Trash2 className="w-4 h-4 text-red-600" />
+                    <Type className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => addContentBlock(section.id, "image")}
+                    className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                    title="Add Image"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => addContentBlock(section.id, "video")}
+                    className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                    title="Add Video"
+                  >
+                    <Video className="w-4 h-4" />
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={img.url}
-                  onChange={(e) => updateProjectImage(index, "url", e.target.value)}
-                  placeholder="Image URL or figma:asset path"
-                  className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none font-mono text-sm"
-                />
-                <input
-                  type="text"
-                  value={img.caption}
-                  onChange={(e) => updateProjectImage(index, "caption", e.target.value)}
-                  placeholder="Image caption (optional)"
-                  className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                />
-                {img.url && (
-                  <div className="rounded-lg overflow-hidden border border-border/60">
-                    <img src={img.url} alt={img.caption} className="w-full h-48 object-cover" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Sections - Refined Design */}
-        <div className="space-y-20">
-          {sections.map((section) => (
-            <section
-              key={section.id}
-              id={section.id}
-              className="scroll-mt-32 bg-gradient-to-br from-muted/20 to-muted/5 border border-border/40 rounded-2xl p-8 md:p-12 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center justify-between mb-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-1.5 h-12 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-                  <h2 className="text-3xl md:text-4xl font-medium tracking-tight">{section.name}</h2>
-                </div>
-                <span className="text-xs text-muted-foreground px-4 py-2 bg-background border border-border/60 rounded-full font-medium">
-                  {section.content.length} blocks
-                </span>
               </div>
 
-              {/* Content Blocks */}
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {section.content.map((block) => (
                   <div key={block.id} className="group relative">
                     {block.type === "text" && (
-                      <div className="relative">
-                        {editingBlock === block.id ? (
-                          <div className="space-y-3">
-                            <textarea
-                              value={block.content}
-                              onChange={(e) =>
-                                updateContent(section.id, block.id, e.target.value)
-                              }
-                              rows={8}
-                              className="w-full px-5 py-4 bg-background border-2 border-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none text-base leading-relaxed"
-                              placeholder="Enter your content here..."
-                            />
-                            <div className="flex justify-end">
-                              <button
-                                onClick={() => setEditingBlock(null)}
-                                className="px-5 py-2.5 text-sm bg-foreground text-background rounded-full flex items-center gap-2 hover:bg-foreground/90 transition-colors shadow-sm"
-                              >
-                                <Check className="w-4 h-4" />
-                                Done Editing
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative group/text bg-background/50 rounded-xl p-6 border border-border/40 hover:border-border/80 transition-all">
-                            <p className="text-foreground/80 leading-[1.75] text-[17px] pr-24 whitespace-pre-wrap">
-                              {block.content || <span className="text-muted-foreground italic">Empty text block - click edit to add content</span>}
-                            </p>
-                            <div className="absolute top-4 right-4 opacity-0 group-hover/text:opacity-100 transition-opacity flex gap-2">
-                              <button
-                                onClick={() => setEditingBlock(block.id)}
-                                className="p-2.5 bg-background border border-border rounded-lg hover:bg-muted shadow-sm"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm("Delete this block?")) {
-                                    deleteContentBlock(section.id, block.id);
-                                  }
-                                }}
-                                className="p-2.5 bg-background border border-border rounded-lg hover:bg-red-50 shadow-sm"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-600" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs text-muted-foreground">Text Block</label>
+                          <button
+                            onClick={() => deleteContentBlock(section.id, block.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <textarea
+                          value={block.content}
+                          onChange={(e) => updateContent(section.id, block.id, e.target.value)}
+                          rows={4}
+                          className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                          placeholder="Enter text content..."
+                        />
                       </div>
                     )}
 
                     {block.type === "image" && (
-                      <div className="relative group/image bg-background/50 rounded-xl border border-border/40 p-6 hover:border-border/80 transition-all">
-                        <div className="space-y-4">
-                          <input
-                            type="text"
-                            value={block.content}
-                            onChange={(e) =>
-                              updateContent(section.id, block.id, e.target.value)
-                            }
-                            placeholder="figma:asset/... or https://..."
-                            className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none font-mono text-sm"
-                          />
-                          {block.content && (
-                            <div className="rounded-lg overflow-hidden shadow-md">
-                              <img
-                                src={block.content}
-                                alt={block.caption || ""}
-                                className="w-full object-cover"
-                              />
-                            </div>
-                          )}
-                          <input
-                            type="text"
-                            value={block.caption || ""}
-                            onChange={(e) => updateCaption(section.id, block.id, e.target.value)}
-                            placeholder="Caption (optional)"
-                            className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-muted-foreground"
-                          />
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs text-muted-foreground">Image Block</label>
+                          <div className="flex gap-2">
+                            {block.content && (
+                              <button
+                                onClick={() => updateContent(section.id, block.id, '')}
+                                className="p-1 hover:bg-yellow-50 hover:text-yellow-600 rounded text-xs"
+                                title="Clear image"
+                              >
+                                Clear
+                              </button>
+                            )}
+                            <button
+                              onClick={() => deleteContentBlock(section.id, block.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            if (confirm("Delete this image?")) {
-                              deleteContentBlock(section.id, block.id);
-                            }
-                          }}
-                          className="absolute top-4 right-4 p-2.5 bg-background border border-border rounded-lg hover:bg-red-50 opacity-0 group-hover/image:opacity-100 transition-opacity shadow-sm"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
+                        <ImageUpload
+                          value={block.content}
+                          onChange={(url) => updateContent(section.id, block.id, url)}
+                          path={`projects/${section.id}/`}
+                          label={block.caption || "Drop image"}
+                        />
+                        <input
+                          type="text"
+                          value={block.caption || ""}
+                          onChange={(e) => updateCaption(section.id, block.id, e.target.value)}
+                          placeholder="Image caption (optional)"
+                          className="mt-2 w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                        />
                       </div>
                     )}
 
                     {block.type === "video" && (
-                      <div className="relative group/video bg-background/50 rounded-xl border border-border/40 p-6 hover:border-border/80 transition-all">
-                        <div className="space-y-4">
-                          <input
-                            type="text"
-                            value={block.content}
-                            onChange={(e) =>
-                              updateContent(section.id, block.id, e.target.value)
-                            }
-                            placeholder="Video URL (YouTube, Vimeo, etc.)"
-                            className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none font-mono text-sm"
-                          />
-                          {block.content && (
-                            <div className="aspect-video bg-muted/50 rounded-lg flex items-center justify-center border border-border/40">
-                              <div className="text-center">
-                                <Video className="w-16 h-16 text-muted-foreground mx-auto mb-2" />
-                                <p className="text-sm text-muted-foreground">Video Preview</p>
-                              </div>
-                            </div>
-                          )}
-                          <input
-                            type="text"
-                            value={block.caption || ""}
-                            onChange={(e) => updateCaption(section.id, block.id, e.target.value)}
-                            placeholder="Caption (optional)"
-                            className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-muted-foreground"
-                          />
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs text-muted-foreground">Video Block</label>
+                          <button
+                            onClick={() => deleteContentBlock(section.id, block.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => {
-                            if (confirm("Delete this video?")) {
-                              deleteContentBlock(section.id, block.id);
-                            }
-                          }}
-                          className="absolute top-4 right-4 p-2.5 bg-background border border-border rounded-lg hover:bg-red-50 opacity-0 group-hover/video:opacity-100 transition-opacity shadow-sm"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
+                        <input
+                          type="url"
+                          value={block.content}
+                          onChange={(e) => updateContent(section.id, block.id, e.target.value)}
+                          placeholder="YouTube or Vimeo URL"
+                          className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                        />
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-
-              {/* Add Content Buttons */}
-              <div className="mt-10 flex flex-wrap gap-3 pt-8 border-t border-border/40">
-                <button
-                  onClick={() => addContentBlock(section.id, "text")}
-                  className="flex items-center gap-2 px-5 py-3 text-sm bg-background border border-border/60 rounded-xl hover:bg-muted/50 hover:border-primary/30 transition-all shadow-sm"
-                >
-                  <Type className="w-4 h-4" />
-                  Add Text Block
-                </button>
-                <button
-                  onClick={() => addContentBlock(section.id, "image")}
-                  className="flex items-center gap-2 px-5 py-3 text-sm bg-background border border-border/60 rounded-xl hover:bg-muted/50 hover:border-primary/30 transition-all shadow-sm"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  Add Image
-                </button>
-                <button
-                  onClick={() => addContentBlock(section.id, "video")}
-                  className="flex items-center gap-2 px-5 py-3 text-sm bg-background border border-border/60 rounded-xl hover:bg-muted/50 hover:border-primary/30 transition-all shadow-sm"
-                >
-                  <Video className="w-4 h-4" />
-                  Add Video
-                </button>
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* Publish Button */}
-        <div className="mt-20 pt-12 border-t border-border/40 flex justify-center">
-          <button
-            onClick={handlePublish}
-            className="flex items-center gap-3 px-12 py-5 bg-gradient-to-r from-primary to-primary/80 text-white rounded-full hover:shadow-xl hover:scale-105 transition-all text-lg font-medium shadow-lg"
-          >
-            <Check className="w-6 h-6" />
-            Publish Changes
-          </button>
+            </div>
+          </motion.div>
+        ))}
         </div>
       </div>
 
-      {/* Scroll to Top Button */}
+      {/* Scroll to Top */}
       {showScrollTop && (
         <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 p-4 bg-foreground text-background rounded-full shadow-2xl hover:bg-foreground/90 hover:scale-110 transition-all z-40 border border-background/20"
+          className="fixed bottom-8 right-8 z-40 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
         >
-          <ArrowUp className="w-6 h-6" />
+          <ArrowUp className="w-5 h-5" />
         </motion.button>
       )}
     </div>

@@ -10,65 +10,70 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const STORAGE_BUCKET = 'portfolio-uploads';
 
 /**
- * Upload an image to Supabase Storage
+ * Upload an image to Supabase Storage via server endpoint (bypasses RLS)
  * @param file - The file to upload
  * @param path - Optional path within the bucket (e.g., 'projects/', 'blog/')
  * @returns The public URL of the uploaded file
  */
 export async function uploadImage(file: File, path: string = ''): Promise<string> {
   try {
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${path}${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    // Upload via server endpoint to bypass RLS
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', path);
 
-    // Upload file
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+    const supabaseUrl = `https://${projectId}.supabase.co`;
+    const response = await fetch(`${supabaseUrl}/functions/v1/make-server-79e7cc1a/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`
+      },
+      body: formData
+    });
 
-    if (error) {
-      console.error('Upload error:', error);
-      throw error;
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('Upload error:', result);
+
+      // Provide helpful error messages
+      if (result.error?.includes('not found') || result.error?.includes('Bucket')) {
+        throw new Error('Storage bucket not initialized. Please click "Initialize Storage" button in Admin Dashboard.');
+      }
+
+      throw new Error(result.error || result.details || 'Upload failed');
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from(STORAGE_BUCKET)
-      .getPublicUrl(data.path);
-
-    return publicUrl;
-  } catch (error) {
+    return result.url;
+  } catch (error: any) {
     console.error('Error uploading image:', error);
     throw error;
   }
 }
 
 /**
- * Delete an image from Supabase Storage
+ * Delete an image from Supabase Storage via server endpoint (bypasses RLS)
  * @param url - The public URL of the file to delete
  */
 export async function deleteImage(url: string): Promise<void> {
   try {
-    // Extract the path from the URL
-    const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split(`/object/public/${STORAGE_BUCKET}/`);
-    if (pathParts.length < 2) {
-      throw new Error('Invalid storage URL');
-    }
-    const filePath = pathParts[1];
+    const supabaseUrl = `https://${projectId}.supabase.co`;
+    const response = await fetch(`${supabaseUrl}/functions/v1/make-server-79e7cc1a/upload`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url })
+    });
 
-    const { error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .remove([filePath]);
+    const result = await response.json();
 
-    if (error) {
-      console.error('Delete error:', error);
-      throw error;
+    if (!response.ok) {
+      console.error('Delete error:', result);
+      throw new Error(result.error || result.details || 'Delete failed');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting image:', error);
     throw error;
   }
@@ -80,27 +85,21 @@ export async function deleteImage(url: string): Promise<void> {
  */
 export async function initializeStorage(): Promise<void> {
   try {
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.error('Error listing buckets:', listError);
-      return;
-    }
-
-    const bucketExists = buckets?.some(bucket => bucket.name === STORAGE_BUCKET);
-
-    if (!bucketExists) {
-      const { error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml']
-      });
-
-      if (createError) {
-        console.error('Error creating bucket:', createError);
-      } else {
-        console.log('Storage bucket created successfully');
+    const supabaseUrl = `https://${projectId}.supabase.co`;
+    const response = await fetch(`${supabaseUrl}/functions/v1/make-server-79e7cc1a/init-storage`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'Content-Type': 'application/json'
       }
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      console.log('Storage initialization:', result.message);
+    } else {
+      console.error('Storage initialization failed:', result.error, result.details);
     }
   } catch (error) {
     console.error('Error initializing storage:', error);

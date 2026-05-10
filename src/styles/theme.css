@@ -76,6 +76,43 @@
   --sidebar-ring: #737373;
 }
 
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #0f0f0f;
+  --card-foreground: #ededed;
+  --popover: #0a0a0a;
+  --popover-foreground: #ededed;
+  --primary: #ffffff;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ededed;
+  --muted: #1a1a1a;
+  --muted-foreground: #a3a3a3;
+  --accent: #262626;
+  --accent-foreground: #ededed;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #262626;
+  --input: transparent;
+  --input-background: #141414;
+  --switch-background: #404040;
+  --ring: #a3a3a3;
+  --chart-1: #60a5fa;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #f87171;
+  --sidebar: #0f0f0f;
+  --sidebar-foreground: #ededed;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #ededed;
+  --sidebar-border: #262626;
+  --sidebar-ring: #a3a3a3;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -200,4 +237,13 @@
   strong {
     font-weight: var(--font-weight-medium);
   }
+}
+
+/* Page title icons theme-aware colors */
+.page-icon {
+  filter: brightness(0);
+}
+
+.dark .page-icon {
+  filter: brightness(0) invert(1);
 }

@@ -1,15 +1,19 @@
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Hammer, Eye, Sparkles, Save, Edit3 } from "lucide-react";
+import { Hammer, Eye, Sparkles, Save, Edit3, Settings, Trash2, Upload } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
-import profileImage from "figma:asset/387f05774b0379ac3bcd3ec623e79ea372c35421.png";
 import { useAdminView } from "../contexts/AdminViewContext";
+import profileImage from "../../imports/Vibhav_photo_3-1.png";
 
 export default function About() {
   const { isAdminView } = useAdminView();
   const [hasChanges, setHasChanges] = useState(false);
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+  const [customProfileImage, setCustomProfileImage] = useState<string | null>(null);
+  const photoMenuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Default data structure
   const defaultData = {
@@ -65,6 +69,30 @@ export default function About() {
     }
   }, []);
 
+  // Load custom profile image from localStorage
+  useEffect(() => {
+    const savedImage = localStorage.getItem("cmsAboutProfileImage");
+    if (savedImage && savedImage.trim() !== "") {
+      setCustomProfileImage(savedImage);
+    }
+  }, []);
+
+  // Handle click outside photo menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (photoMenuRef.current && !photoMenuRef.current.contains(event.target as Node)) {
+        setShowPhotoMenu(false);
+      }
+    }
+
+    if (showPhotoMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPhotoMenu]);
+
   const handleContentEdit = (path: string, value: string) => {
     setHasChanges(true);
     const keys = path.split('.');
@@ -82,9 +110,39 @@ export default function About() {
 
   const handleSave = () => {
     localStorage.setItem("cmsAboutData", JSON.stringify(cmsData));
+    if (customProfileImage) {
+      localStorage.setItem("cmsAboutProfileImage", customProfileImage);
+    }
     setHasChanges(false);
     console.log("Saved About CMS Data:", cmsData);
     alert("About page updated successfully!");
+  };
+
+  const handleReplacePhoto = () => {
+    fileInputRef.current?.click();
+    setShowPhotoMenu(false);
+  };
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setCustomProfileImage(result);
+        setHasChanges(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeletePhoto = () => {
+    if (confirm("Are you sure you want to delete the custom profile photo and restore the default?")) {
+      setCustomProfileImage(null);
+      localStorage.removeItem("cmsAboutProfileImage");
+      setShowPhotoMenu(false);
+      setHasChanges(true);
+    }
   };
 
   // Editable component for inline editing
@@ -187,11 +245,89 @@ export default function About() {
                   <motion.img
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    src={profileImage}
+                    src={customProfileImage || profileImage}
                     alt="Vibhav Kamat"
                     className="w-full h-full object-cover object-top grayscale-[15%]"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== profileImage) {
+                        target.src = profileImage;
+                        setCustomProfileImage(null);
+                        localStorage.removeItem("cmsAboutProfileImage");
+                      }
+                    }}
                   />
+
+                  {/* Admin Controls */}
+                  {isAdminView && (
+                    <>
+                      <div ref={photoMenuRef}>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowPhotoMenu(!showPhotoMenu);
+                          }}
+                          className="absolute top-3 left-3 z-10 p-2 bg-background/95 backdrop-blur-sm hover:bg-background rounded-full shadow-lg transition-all hover:shadow-xl border border-border"
+                          title="Photo settings"
+                        >
+                          <Settings className="w-4 h-4 text-foreground/70 hover:text-foreground" />
+                        </motion.button>
+
+                        <AnimatePresence>
+                          {showPhotoMenu && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute top-14 left-3 z-20 bg-card rounded-lg shadow-xl border border-border min-w-[180px] overflow-hidden"
+                            >
+                              <div className="py-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleReplacePhoto();
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-muted transition-colors text-sm text-card-foreground"
+                                >
+                                  <Upload className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                  <span>Replace</span>
+                                </button>
+
+                                <div className="border-t border-border my-1" />
+
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDeletePhoto();
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-destructive/10 transition-colors text-sm text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </>
+                  )}
                 </div>
+
+                {/* Hidden file input for photo upload */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoFileChange}
+                  className="hidden"
+                />
               </motion.div>
 
               {/* Meta Information */}

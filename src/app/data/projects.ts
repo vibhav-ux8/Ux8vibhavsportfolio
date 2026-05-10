@@ -1,40 +1,22 @@
 import predictThumbnail from "figma:asset/e929fd97ca6cf96cdf890fac8668f5c1bf76e312.png";
-import predictLogo from "figma:asset/f0e549839af9b3f17bcbbdb771522c6d05f6a431.png";
 import predictLogoOverlay from "figma:asset/805085f5019797d0c845ddc4bb7cea53d9066e58.png";
 import predictContextImage from "figma:asset/485b0e9763c9f09882949ad898f424a052b9318a.png";
 import kavachThumbnail from "figma:asset/45e5cd2d6bc059c07d9741ad2d8d8c8a2b4816ac.png";
 import kavachLogoOverlay from "figma:asset/585b3b78ebd78bd8195037b7d052c0617ba5ed56.png";
 import immuneThumbnail from "figma:asset/67bc22aba19654ede810fd7ef233a8e777a29076.png";
-import immuneLogo from "figma:asset/8f326b0148602db45c47ce573ca33f7605115a5e.png";
 import immuneLogoOverlay from "figma:asset/61524d725f7719b193079141feda829efdb07bee.png";
-import rajmandalaThumbnail from "figma:asset/3a549c7972bed39fde873994e21501818eff1145.png";
-import rajmandalaLogoOverlay from "figma:asset/369577dc20e35e5ef56434a4b34e109d714aeaa3.png";
-import aranyaniThumbnail from "figma:asset/adb80a6b72e9865ae5846ce374ae9e74d60ad977.png";
-import aranyaniLogoOverlay from "figma:asset/ac926c965228b0518c6b00c27eaa5d3ef6db9c87.png";
-import parvaDarshiniThumbnail from "figma:asset/44e79e12db43f51e35640c21caacbf8387aae069.png";
-import krishakThumbnail from "figma:asset/8640a3f1848fdf7c4ea311c93db0acb22e71805c.png";
-import krishakLogoOverlay from "figma:asset/3fb44d4ebb7f82919ef6d6ce2d77bd4d4577374c.png";
-import guptThumbnail from "figma:asset/e8e769656578d1efcfd90d5ef3c881d3c9542ae0.png";
-import guptLogoOverlay from "figma:asset/2321548836103114ef5e7810b74075629fa3a1cb.png";
-import parvaDarshiniLogoOverlay from "figma:asset/7880c9cdff3abfd952c9adaba7e96527298174b4.png";
-import kashiThumbnail from "figma:asset/02b9fe41263c97a2716eac009d61fa2d9f77131e.png";
-import kashiLogoOverlay from "figma:asset/367014515cc14bf6311457b00a5503817855ce4c.png";
-import srujanalayanThumbnail from "figma:asset/ec013fa88eb9afb18e89d543ced8165486c5675f.png";
-import srujanalayanLogoOverlay from "figma:asset/baaf948fd23e12a2fda739bb9e1281e2f4f06502.png";
-import manavThumbnail from "figma:asset/224ed6a35eac0876ffde6af6cab23335bfcbd4da.png";
-import manavLogoOverlay from "figma:asset/975750395aa26be6cfcc84a7e23c8ad6b1a19354.png";
-import pravahaLogoOverlay from "figma:asset/20bde341e1ff4139730332f5a997fcab6c8a82ea.png";
 
 export interface Project {
   id: string;
   title: string;
   description: string;
   tags: string[];
-  category: string;
-  sector: string;
+  category: string | string[];
+  sector: string | string[];
   thumbnail: string;
   logo?: string;
   logoOverlay?: string;
+  coverImage?: string;
   year: string;
   role: string;
   context: string;
@@ -43,6 +25,7 @@ export interface Project {
   prototyping: string;
   outcome: string;
   icon: string;
+  archived?: boolean;
   images: {
     url: string;
     caption: string;
@@ -129,258 +112,6 @@ export const projects: Project[] = [
         caption: "Bilingual appointment scheduling flow optimized for accessibility and health literacy"
       }
     ]
-  },
-  {
-    id: "manav",
-    title: "Manav",
-    description: "Human Resource Management for Large Indian Multinational Enterprises",
-    tags: ["HRMS"],
-    category: "DPI & Governance",
-    sector: "UI-UX Design",
-    thumbnail: manavThumbnail,
-    logoOverlay: manavLogoOverlay,
-    icon: "Users",
-    year: "2024-2026",
-    role: "Lead Product Designer",
-    context: "Large Indian multinational enterprises struggled with fragmented HR systems across multiple geographies, departments, and employee scales. Legacy systems couldn't handle complex organizational hierarchies, diverse employment types, and compliance requirements across different states and countries. Organizations needed unified platform that could scale from 10,000 to 100,000+ employees while maintaining cultural sensitivity and local regulatory compliance.",
-    research: "Conducted extensive research across 5 large Indian MNCs spanning IT, manufacturing, and services sectors. Interviewed 200+ stakeholders including HR leaders, managers, employees, and compliance teams. Observed HR workflows across headquarters, regional offices, and factory locations. Identified pain points in talent acquisition, performance management, payroll, and employee engagement across diverse workforce demographics.",
-    designSystem: "Designed comprehensive HRMS with role-based interfaces for employees, managers, HR teams, and executives. Created intelligent workflows automating routine tasks while maintaining human oversight for critical decisions. Built unified employee experience platform accessible via web, mobile, and kiosk for frontline workers. Designed analytics dashboards providing insights on workforce trends, attrition risk, and organizational health.",
-    prototyping: "Piloted with 10,000 employees across 3 business units. Conducted usability testing with employees from entry-level to C-suite. Validated mobile-first design with field employees having limited connectivity. Iterated on multilingual support covering 8 Indian languages. Tested compliance workflows with legal and finance teams ensuring regulatory adherence.",
-    outcome: "Deployed across 5 major Indian MNCs managing 250,000+ employees. Reduced HR administrative time by 60% through automation. Employee self-service adoption reached 85% within 6 months. Performance review cycle time reduced from 3 months to 3 weeks. Platform achieved 4.3/5 employee satisfaction rating. Recognized as 'Best HR Tech Implementation' at India HR Summit 2023.",
-    images: [
-      {
-        url: manavThumbnail,
-        caption: "Modern enterprise campus representing organizational scale"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1656291716879-295102bc71e3?w=1200&q=80",
-        caption: "Unified employee experience platform and manager dashboard"
-      }
-    ]
-  },
-  {
-    id: "data-visualization-platform",
-    title: "Rajmandala",
-    description: "AI powered Geostrategic Intelligence & Situational Awareness Platform",
-    tags: ["Governance", "Wildlife management"],
-    category: "DPI & Governance",
-    sector: "UI-UX Design",
-    thumbnail: rajmandalaThumbnail,
-    logoOverlay: rajmandalaLogoOverlay,
-    icon: "Globe",
-    year: "2024-2026",
-    role: "Senior Product Designer, Visualization Specialist",
-    context: "Climate scientists and policy advisors lacked intuitive tools to explore massive datasets (100TB+) and communicate findings to non-technical stakeholders. Existing tools required coding knowledge, limiting accessibility to researchers without programming backgrounds.",
-    research: "Embedded with climate research team for 3 months to understand workflows. Interviewed 30+ researchers and policy advisors. Analyzed existing visualization tools in scientific and policy contexts. Identified need for 'progressive expertise'—interfaces that serve both novice and advanced users.",
-    designSystem: "Designed layered interaction model supporting quick insights for novices and deep exploration for experts. Created library of climate-specific visualization patterns (time-series, geospatial, multi-variate). Developed color systems that are colorblind-safe while maintaining scientific accuracy.",
-    prototyping: "Built working prototypes with real climate data using D3.js and React. Conducted testing with 40+ researchers in lab and field settings. Iterated on data filtering and export workflows. Created 'guided analysis' feature that suggests relevant visualizations based on data structure.",
-    outcome: "Adopted by 500+ researchers across 20 institutions. Enabled non-technical policy makers to independently explore data, reducing analyst bottleneck by 60%. Used to create visualizations for 3 major policy reports influencing $2B+ in climate funding. Won 'Best Research Tool' award at Science Visualization Conference.",
-    images: [
-      {
-        url: rajmandalaThumbnail,
-        caption: "Layered interaction model enabling both quick insights and deep data exploration"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1543286386-713bdd548da4?w=1200&q=80",
-        caption: "Climate-specific visualization patterns with colorblind-safe, scientifically accurate color systems"
-      }
-    ]
-  },
-  {
-    id: "public-benefits-application",
-    title: "Aranyani",
-    description: "Forest Intelligence Platform for human-wildlife conflict management",
-    tags: ["Wildlife-conservation", "Case study"],
-    category: "DPI & Governance",
-    sector: "UI-UX Design",
-    thumbnail: aranyaniThumbnail,
-    logoOverlay: aranyaniLogoOverlay,
-    icon: "FileText",
-    year: "2024-2026",
-    role: "Lead Product Designer",
-    context: "State benefits programs had a complex 40+ page application with 85% abandonment rate. Low-income families and elderly applicants struggled with technical jargon and lacked access to required documentation. The redesign needed to balance simplification with legal compliance requirements.",
-    research: "Conducted field research at community centers and libraries where residents apply for benefits. Interviewed 50+ applicants and social workers. Analyzed 200+ abandoned applications to identify drop-off points. Created journey maps highlighting emotional stress points and documentation barriers.",
-    designSystem: "Designed progressive question flow with plain language and contextual help. Created mobile-first interface supporting offline completion and resume-later functionality. Built document upload system with multiple input methods (photo, scan, fax). Designed for screen readers and low-literacy users.",
-    prototyping: "Built prototypes tested with 60+ applicants in community settings. Partnered with social workers for validation. Iterated on question sequencing and help text based on comprehension testing. Created multi-language support for 8 languages based on state demographics.",
-    outcome: "Application completion rate increased from 15% to 78%. Average completion time reduced from 2.5 hours to 40 minutes. Support requests decreased 68%. System now processes 50K+ applications monthly. Received national recognition for inclusive design practices.",
-    images: [
-      {
-        url: aranyaniThumbnail,
-        caption: "Progressive question flow with plain language and contextual help"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=1200&q=80",
-        caption: "Multi-method document upload supporting diverse user needs"
-      }
-    ]
-  },
-  {
-    id: "enterprise-analytics-dashboard",
-    title: "Krishak",
-    description: "AI assisted Advisory for Agriculture",
-    tags: ["Agritech", "Weather forecast"],
-    category: "DPI & Governance",
-    sector: "Product Design",
-    thumbnail: krishakThumbnail,
-    logoOverlay: krishakLogoOverlay,
-    icon: "BarChart3",
-    year: "2024-2026",
-    role: "Senior Product Designer",
-    context: "Large enterprise clients struggled with fragmented analytics tools across departments. Executives needed unified view of KPIs while analysts required deep-dive capabilities. Challenge was designing for 10+ user personas with vastly different technical skills and business needs.",
-    research: "Shadowed analysts and executives at 5 Fortune 500 companies. Conducted card sorting exercises to understand mental models for data organization. Analyzed usage patterns from legacy analytics tools. Created persona spectrum from C-suite to data analysts with distinct needs and workflows.",
-    designSystem: "Developed modular dashboard system with drag-and-drop customization. Created progressive disclosure patterns for complex data while maintaining scannable overview. Designed role-based templates pre-configured for common use cases. Built accessible color system for charts supporting colorblind users.",
-    prototyping: "Built interactive prototypes with realistic data sets. Conducted A/B testing on 3 navigation paradigms with 200+ users. Iterated on drill-down interactions and data export workflows. Created onboarding flow reducing time-to-first-insight from 2 days to 20 minutes.",
-    outcome: "Deployed to 8 Fortune 500 clients serving 15,000+ users. Increased daily active users by 240% compared to legacy tools. Reduced time to generate executive reports from 8 hours to 15 minutes. NPS score of 72. Platform contributed to $180M in product revenue.",
-    images: [
-      {
-        url: krishakThumbnail,
-        caption: "Modular dashboard with role-based templates and customization"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1543286386-713bdd548da4?w=1200&q=80",
-        caption: "Progressive disclosure patterns balancing overview and deep analysis"
-      }
-    ]
-  },
-  {
-    id: "ai-content-moderation",
-    title: "Parva Darshini",
-    description: "Reclaiming Bharatiya time-keeping via innovative visualisation of Panchang",
-    tags: ["Indian Timekeeping", "Vedic Astronomy"],
-    category: "IKS & Culture",
-    sector: "Digital Illustration",
-    thumbnail: parvaDarshiniThumbnail,
-    logoOverlay: parvaDarshiniLogoOverlay,
-    icon: "ShieldAlert",
-    year: "2024-2026",
-    role: "Product Designer",
-    context: "Social platform needed to scale content moderation while protecting moderator mental health. Existing tools lacked context, causing moderator burnout and inconsistent decisions. Required ethical AI design that maintained human agency and supported moderator wellbeing.",
-    research: "Conducted sensitive research with 25+ content moderators. Partnered with mental health experts to understand trauma impacts. Analyzed 10,000+ moderation decisions to identify patterns. Created ethical framework for AI-assisted decision making that prioritized human judgment.",
-    designSystem: "Designed queue management system grouping similar content to reduce context-switching trauma. Created AI confidence indicators showing uncertainty to prompt human review. Built wellness features including mandatory breaks and access to support resources. Designed audit trail for transparency and quality assurance.",
-    prototyping: "Built prototypes with real moderation scenarios (sanitized). Conducted trauma-informed testing with moderators. Iterated on AI explanation patterns to build trust and understanding. Created customizable workspace allowing moderators to control pacing and content types.",
-    outcome: "Moderator accuracy improved from 87% to 96%. Processing time per case reduced 45% while maintaining quality. Moderator satisfaction increased from 2.8 to 4.2/5. 60% reduction in reported emotional distress. AI-human collaboration model adopted as company standard for sensitive automation.",
-    images: [
-      {
-        url: parvaDarshiniThumbnail,
-        caption: "AI confidence indicators and human-centered queue management"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80",
-        caption: "Wellness features and trauma-informed design patterns"
-      }
-    ]
-  },
-  {
-    id: "gupt",
-    title: "गुप्त",
-    description: "Indian cypher alphabet system",
-    tags: ["Cryptography", "Language"],
-    category: "IKS & Culture",
-    sector: "Game Design",
-    thumbnail: guptThumbnail,
-    logoOverlay: guptLogoOverlay,
-    icon: "Lock",
-    year: "2024-2026",
-    role: "Product Designer",
-    context: "Indian cypher alphabet system development project.",
-    research: "Research conducted on traditional Indian cryptographic methods and modern applications.",
-    designSystem: "Designed intuitive interface for cipher encoding and decoding with educational components.",
-    prototyping: "Built interactive prototypes demonstrating cipher functionality and learning pathways.",
-    outcome: "Successfully developed a comprehensive cypher system preserving traditional Indian cryptographic knowledge.",
-    images: [
-      {
-        url: guptThumbnail,
-        caption: "Cipher alphabet system interface"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1516110833967-0b5716ca1387?w=1200&q=80",
-        caption: "Cryptographic encoding visualization"
-      }
-    ]
-  },
-  {
-    id: "kashi",
-    title: "Kashi",
-    description: "Board game for learning Purushartha model of life",
-    tags: ["Indic Knowledge", "Living culture", "Game Design"],
-    category: "IKS & Culture",
-    sector: "Communication",
-    thumbnail: kashiThumbnail,
-    logoOverlay: kashiLogoOverlay,
-    icon: "Dices",
-    year: "2024-2026",
-    role: "Game Designer & Product Designer",
-    context: "Educational board game project designed to teach the Purushartha model of life through interactive gameplay.",
-    research: "Researched traditional Indic philosophical concepts and modern game design principles to create an engaging learning experience.",
-    designSystem: "Designed game mechanics, board layout, and visual identity that authentically represents the four Purusharthas: Dharma, Artha, Kama, and Moksha.",
-    prototyping: "Created multiple prototypes and conducted playtesting sessions to refine game mechanics and educational value.",
-    outcome: "Successfully developed an engaging board game that makes ancient wisdom accessible and relevant to contemporary learners.",
-    images: [
-      {
-        url: kashiThumbnail,
-        caption: "Board game design and gameplay mechanics"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1611891487950-0bc5a3e7f76f?w=1200&q=80",
-        caption: "Educational framework visualizing the Purushartha model"
-      }
-    ]
-  },
-  {
-    id: "srujanalaya",
-    title: "Srujanalaya",
-    description: "Storytelling and Digital Art Platform",
-    tags: ["Sacred Digital", "Iconography"],
-    category: "IKS & Culture",
-    sector: "Digital Illustration",
-    thumbnail: srujanalayanThumbnail,
-    logoOverlay: srujanalayanLogoOverlay,
-    icon: "Palette",
-    year: "2024-2026",
-    role: "Product Designer & Platform Architect",
-    context: "Digital platform designed to preserve and share sacred art and storytelling traditions through modern technology.",
-    research: "Explored traditional iconographic practices and digital storytelling methods to create a platform that honors cultural heritage while embracing contemporary tools.",
-    designSystem: "Developed intuitive tools for digital artists and storytellers to create, curate, and share sacred art while maintaining authenticity and cultural sensitivity.",
-    prototyping: "Built collaborative features enabling artists and communities to co-create and preserve traditional narratives in digital formats.",
-    outcome: "Created a thriving platform that bridges traditional sacred art practices with digital innovation, serving as a cultural preservation tool.",
-    images: [
-      {
-        url: srujanalayanThumbnail,
-        caption: "Digital art creation and storytelling interface"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1561998338-13ad7883b20f?w=1200&q=80",
-        caption: "Sacred iconography gallery and curation tools"
-      }
-    ]
-  },
-  {
-    id: "pravaha",
-    title: "प्रवाह (Pravāha)",
-    description: "Dharmic Design & Futures",
-    tags: ["Indic Knowledge system", "Manifestation", "Design Pedagogy"],
-    category: "IKS & Culture",
-    sector: "Communication",
-    thumbnail: "https://images.unsplash.com/photo-1605606582211-088f336964ed?w=800&q=80",
-    logoOverlay: pravahaLogoOverlay,
-    icon: "BookOpen",
-    year: "2024-2026",
-    role: "Design Educator & Strategic Advisor",
-    context: "Educational framework integrating Indic knowledge systems with contemporary design thinking to create culturally grounded futures.",
-    research: "Deep exploration of dharmic principles and their application to modern design pedagogy, creating bridges between ancient wisdom and future-focused practice.",
-    designSystem: "Developed comprehensive curriculum and manifestation frameworks that ground design education in Indic knowledge systems and cultural values.",
-    prototyping: "Created workshops, teaching materials, and collaborative learning experiences that embody dharmic design principles.",
-    outcome: "Established new pedagogical approaches that honor traditional knowledge while empowering designers to shape culturally authentic futures.",
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1605606582211-088f336964ed?w=1200&q=80",
-        caption: "Dharmic design framework and pedagogy materials"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=1200&q=80",
-        caption: "Manifestation principles and futures thinking workshops"
-      }
-    ]
   }
 ];
 
@@ -398,8 +129,10 @@ export function getMergedProjects(): Project[] {
 
   if (savedEdits) {
     const editsData = JSON.parse(savedEdits);
+    console.log("Loading CMS edits:", editsData);
     mergedProjects = projects.map(project => {
       if (editsData[project.id]) {
+        console.log(`Merging edits for project ${project.id}:`, editsData[project.id]);
         const editedProject = { ...project, ...editsData[project.id] };
         // Preserve original thumbnail and logoOverlay if not explicitly changed in edits
         if (!editsData[project.id].thumbnail || editsData[project.id].thumbnail === '') {
@@ -449,7 +182,22 @@ export function getAllTags(): string[] {
 
 export function getAllCategories(): string[] {
   const categories = new Set<string>();
-  projects.forEach(p => categories.add(p.category));
+  // Use merged projects instead of just static projects
+  const allProjects = getMergedProjects();
+  allProjects.forEach(p => {
+    // Handle both string and array types
+    if (p.category) {
+      if (Array.isArray(p.category)) {
+        p.category.forEach(cat => {
+          if (cat && cat.trim() !== '') {
+            categories.add(cat);
+          }
+        });
+      } else if (typeof p.category === 'string' && p.category.trim() !== '') {
+        categories.add(p.category);
+      }
+    }
+  });
   // Custom sort order
   const order = [
     "LEA & Defence",
@@ -472,7 +220,22 @@ export function getAllCategories(): string[] {
 
 export function getAllSectors(): string[] {
   const sectors = new Set<string>();
-  projects.forEach(p => sectors.add(p.sector));
+  // Use merged projects instead of just static projects
+  const allProjects = getMergedProjects();
+  allProjects.forEach(p => {
+    // Handle both string and array types
+    if (p.sector) {
+      if (Array.isArray(p.sector)) {
+        p.sector.forEach(sec => {
+          if (sec && sec.trim() !== '') {
+            sectors.add(sec);
+          }
+        });
+      } else if (typeof p.sector === 'string' && p.sector.trim() !== '') {
+        sectors.add(p.sector);
+      }
+    }
+  });
   // Custom sort order
   const order = [
     "UI-UX Design",
@@ -495,7 +258,7 @@ export function getAllSectors(): string[] {
 // Utility function to reset a specific project to its original state
 export function resetProjectToOriginal(projectId: string): void {
   if (typeof window === 'undefined') return;
-  
+
   const savedEdits = localStorage.getItem("cmsProjectsData");
   if (savedEdits) {
     const editsData = JSON.parse(savedEdits);

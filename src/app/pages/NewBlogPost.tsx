@@ -23,7 +23,7 @@ export default function NewBlogPost() {
     tags: ["Design"],
     category: "Uncategorized",
     slug: `untitled-blog-${Date.now()}`,
-    image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1200&q=80",
+    image: "",
     content: [] as ContentBlock[],
   });
 
@@ -49,7 +49,7 @@ export default function NewBlogPost() {
       alert("Blog post saved successfully!");
       
       // Navigate to edit page for further editing
-      navigate(`/admin/blog/${slug}/edit`);
+      navigate(`/blog/edit/${slug}`);
     } catch (error) {
       console.error("Error saving blog post:", error);
       alert("Error saving blog post. Please try again.");
@@ -57,9 +57,31 @@ export default function NewBlogPost() {
   };
 
   const handlePublish = () => {
-    handleSave();
-    alert("Blog post published successfully!");
-    navigate("/admin/dashboard");
+    try {
+      // Generate slug from title
+      const slug = postData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      const updatedPost = { ...postData, slug };
+
+      // Get existing saved posts
+      const savedPosts = localStorage.getItem("cmsBlogPosts");
+      let posts = savedPosts ? JSON.parse(savedPosts) : [];
+
+      // Add the new post
+      posts.push(updatedPost);
+
+      // Save to localStorage
+      localStorage.setItem("cmsBlogPosts", JSON.stringify(posts));
+
+      alert("Blog post published successfully!");
+      navigate("/blog");
+    } catch (error) {
+      console.error("Error publishing blog post:", error);
+      alert("Error publishing blog post. Please try again.");
+    }
   };
 
   // Content Block Management
@@ -72,7 +94,7 @@ export default function NewBlogPost() {
     };
     setPostData({
       ...postData,
-      content: [...(postData.content || []), newBlock]
+      content: [newBlock, ...(postData.content || [])]
     });
     // Automatically activate editing for the new block
     setEditingBlockId(newBlock.id);
@@ -396,11 +418,11 @@ export default function NewBlogPost() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => navigate("/admin/dashboard")}
+              onClick={() => navigate("/blog")}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
-              Back to Dashboard
+              Back to Blog
             </button>
 
             <div className="flex items-center gap-3">

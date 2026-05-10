@@ -17,7 +17,7 @@ export function BlogCard({ post, onUpdate }: BlogCardProps) {
   const navigate = useNavigate();
 
   const handleEdit = () => {
-    navigate(`/admin/dashboard/edit-blog/${post.slug}`);
+    navigate(`/blog/edit/${post.slug}`);
   };
 
   const handleDuplicate = () => {

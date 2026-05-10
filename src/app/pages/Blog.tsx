@@ -1,12 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { BlogCard } from "../components/BlogCard";
 import { getMergedBlogPosts, getAllBlogCategories } from "../data/blog";
 import { motion } from "motion/react";
-import { ChevronLeft, ChevronRight, ChevronDown, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Edit2 } from "lucide-react";
 import { useAdminView } from "../contexts/AdminViewContext";
 import { useNavigate } from "react-router";
+import patternLockIcon from "../../imports/pattern-lock.png";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+
+interface DraggableBlogCardProps {
+  post: any;
+  index: number;
+  moveBlogPost: (dragId: string, hoverId: string) => void;
+  onUpdate: () => void;
+  isAdminView: boolean;
+}
+
+const DraggableBlogCard = ({ post, index, moveBlogPost, onUpdate, isAdminView }: DraggableBlogCardProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: "BLOG_CARD",
+    item: { id: post.id, index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    canDrag: isAdminView,
+  });
+
+  const [{ isOver }, drop] = useDrop({
+    accept: "BLOG_CARD",
+    hover: (item: { id: string; index: number }) => {
+      if (!ref.current) return;
+      if (item.id === post.id) return;
+
+      moveBlogPost(item.id, post.id);
+      item.index = index;
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+    }),
+  });
+
+  drag(drop(ref));
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isAdminView ? 'grab' : 'default',
+        transition: 'opacity 0.2s ease',
+      }}
+      className={`${isOver && isAdminView ? 'ring-2 ring-primary ring-offset-2 rounded-lg transition-all' : ''} ${isDragging ? 'scale-105' : ''}`}
+    >
+      <BlogCard post={post} onUpdate={onUpdate} />
+    </div>
+  );
+};
 
 export default function Blog() {
   const { isAdminView } = useAdminView();
@@ -16,12 +70,82 @@ export default function Blog() {
   const [selectedTimeline, setSelectedTimeline] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set(["2026", "2025"]));
   const [blogPosts, setBlogPosts] = useState(getMergedBlogPosts());
+  const [blogOrder, setBlogOrder] = useState<string[]>([]);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [pageTitle, setPageTitle] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('blogPageTitle');
+      return saved || "Insights & Thinking";
+    }
+    return "Insights & Thinking";
+  });
+  const [pageDescription, setPageDescription] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('blogPageDescription');
+      return saved || "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.";
+    }
+    return "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.";
+  });
   const postsPerPage = 15;
   const allCategories = getAllBlogCategories();
 
+  // Load blog order from localStorage on mount
+  useEffect(() => {
+    const mergedPosts = getMergedBlogPosts();
+    setBlogPosts(mergedPosts);
+
+    const savedOrder = localStorage.getItem("blogOrder");
+    if (savedOrder) {
+      setBlogOrder(JSON.parse(savedOrder));
+    } else {
+      // Initialize with current blog post IDs
+      setBlogOrder(mergedPosts.map(p => p.id));
+    }
+  }, []);
+
   const handleUpdate = () => {
-    setBlogPosts(getMergedBlogPosts());
+    const mergedPosts = getMergedBlogPosts();
+    setBlogPosts(mergedPosts);
+
+    // Update blog order if new posts were added
+    setBlogOrder(prevOrder => {
+      const currentIds = new Set(prevOrder);
+      const newIds = mergedPosts.filter(p => !currentIds.has(p.id)).map(p => p.id);
+      return [...prevOrder, ...newIds];
+    });
   };
+
+  // Apply saved order to blog posts
+  const orderedBlogPosts = [...blogPosts].sort((a, b) => {
+    const indexA = blogOrder.indexOf(a.id);
+    const indexB = blogOrder.indexOf(b.id);
+    // If not in order array, put at end
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  // Move blog post in the order array
+  const moveBlogPost = useCallback((dragId: string, hoverId: string) => {
+    setBlogOrder(prevOrder => {
+      const newOrder = [...prevOrder];
+      const dragIndex = newOrder.indexOf(dragId);
+      const hoverIndex = newOrder.indexOf(hoverId);
+
+      if (dragIndex === -1 || hoverIndex === -1) return prevOrder;
+
+      // Remove drag item and insert at hover position
+      newOrder.splice(dragIndex, 1);
+      newOrder.splice(hoverIndex, 0, dragId);
+
+      // Save to localStorage
+      localStorage.setItem("blogOrder", JSON.stringify(newOrder));
+
+      return newOrder;
+    });
+  }, []);
 
   // Extract unique years and months from blog posts
   const getTimeline = () => {
@@ -61,9 +185,9 @@ export default function Blog() {
 
   const timeline = getTimeline();
 
-  const filteredPosts = blogPosts.filter(post => {
+  const filteredPosts = orderedBlogPosts.filter(post => {
     const categoryMatch = selectedCategory ? post.category === selectedCategory : true;
-    const timelineMatch = selectedTimeline 
+    const timelineMatch = selectedTimeline
       ? post.date.includes(selectedTimeline)
       : true;
     return categoryMatch && timelineMatch;
@@ -96,6 +220,28 @@ export default function Blog() {
     setExpandedYears(newExpandedYears);
   };
 
+  const handleSaveTitle = () => {
+    localStorage.setItem('blogPageTitle', pageTitle);
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelTitle = () => {
+    const saved = localStorage.getItem('blogPageTitle');
+    setPageTitle(saved || "Insights & Thinking");
+    setIsEditingTitle(false);
+  };
+
+  const handleSaveDescription = () => {
+    localStorage.setItem('blogPageDescription', pageDescription);
+    setIsEditingDescription(false);
+  };
+
+  const handleCancelDescription = () => {
+    const saved = localStorage.getItem('blogPageDescription');
+    setPageDescription(saved || "Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.");
+    setIsEditingDescription(false);
+  };
+
   // Animation variants
   const fadeInUp = {
     hidden: { opacity: 0, y: 60 },
@@ -119,8 +265,9 @@ export default function Blog() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <DndProvider backend={HTML5Backend}>
+      <div className="min-h-screen bg-background">
+        <Navigation />
       
       <section className="py-32 pt-40">
         <div className="max-w-[1400px] mx-auto px-8 lg:px-16">
@@ -140,12 +287,94 @@ export default function Blog() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="h-1 bg-gradient-to-r from-primary to-purple-600 mb-8 rounded-full"
             />
-            <h1 className="text-[56px] md:text-[72px] lg:text-[88px] font-medium mb-6 tracking-[-0.03em] leading-[1.05] md:leading-[0.95]" style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}>
-              Insights & Thinking
-            </h1>
-            <p className="text-[19px] md:text-[21px] text-muted-foreground max-w-4xl leading-[1.6] tracking-[-0.011em]">
-              Thoughts on design leadership, systems thinking, AI ethics, accessibility, and building products that serve the public good.
-            </p>
+            <div className="relative group">
+              {isEditingTitle ? (
+                <div className="space-y-3 mb-6">
+                  <input
+                    type="text"
+                    value={pageTitle}
+                    onChange={(e) => setPageTitle(e.target.value)}
+                    className="w-full px-4 py-3 text-[56px] md:text-[72px] lg:text-[88px] font-medium tracking-[-0.03em] leading-[1.05] md:leading-[0.95] border border-border/60 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                    autoFocus
+                    style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveTitle}
+                      className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelTitle}
+                      className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <h1 className="text-[56px] md:text-[72px] lg:text-[88px] font-medium mb-6 tracking-[-0.03em] leading-[1.05] md:leading-[0.95] inline-flex items-center gap-6" style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}>
+                  <span>{pageTitle}</span>
+                  <img
+                    src={patternLockIcon}
+                    alt="pattern lock"
+                    className="w-9 h-9 md:w-11 md:h-11 lg:w-14 lg:h-14 rotate-180 page-icon flex-shrink-0"
+                  />
+                  {isAdminView && (
+                    <button
+                      onClick={() => setIsEditingTitle(true)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg"
+                      title="Edit title"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </h1>
+              )}
+            </div>
+            <div className="relative group max-w-4xl">
+              {isEditingDescription ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={pageDescription}
+                    onChange={(e) => setPageDescription(e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 text-[19px] md:text-[21px] text-muted-foreground leading-[1.6] tracking-[-0.011em] border border-border/60 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveDescription}
+                      className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelDescription}
+                      className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[19px] md:text-[21px] text-muted-foreground leading-[1.6] tracking-[-0.011em]">
+                    {pageDescription}
+                  </p>
+                  {isAdminView && (
+                    <button
+                      onClick={() => setIsEditingDescription(true)}
+                      className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg"
+                      title="Edit description"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </motion.div>
 
           {/* Filters */}
@@ -326,7 +555,7 @@ export default function Blog() {
               </motion.div>
 
               {/* Blog Grid */}
-              <motion.div 
+              <motion.div
                 key={currentPage} // Force re-animation on page change
                 initial="hidden"
                 animate="visible"
@@ -339,7 +568,13 @@ export default function Blog() {
                     variants={fadeInUp}
                     transition={{ duration: 0.5, delay: index * 0.05 }}
                   >
-                    <BlogCard post={post} onUpdate={handleUpdate} />
+                    <DraggableBlogCard
+                      post={post}
+                      index={index}
+                      moveBlogPost={moveBlogPost}
+                      onUpdate={handleUpdate}
+                      isAdminView={isAdminView}
+                    />
                   </motion.div>
                 ))}
               </motion.div>
@@ -410,18 +645,19 @@ export default function Blog() {
           exit={{ scale: 0, opacity: 0 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate("/admin/blog/new")}
-          className="fixed bottom-8 right-8 z-50 bg-foreground text-background rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all flex items-center gap-3 group"
+          onClick={() => navigate("/blog/new")}
+          className="fixed top-24 right-8 z-50 bg-foreground text-background rounded-full px-6 py-3 shadow-2xl hover:shadow-3xl transition-all flex items-center gap-2 group"
           title="Create New Post"
         >
-          <Plus className="w-6 h-6" />
-          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-medium">
+          <Plus className="w-5 h-5" />
+          <span className="font-medium text-sm">
             New Post
           </span>
         </motion.button>
       )}
 
       <Footer />
-    </div>
+      </div>
+    </DndProvider>
   );
 }

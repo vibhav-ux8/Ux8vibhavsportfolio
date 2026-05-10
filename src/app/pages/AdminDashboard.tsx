@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { LogOut, FileText, FolderOpen, PlusCircle, Edit2, Trash2 } from "lucide-react";
 import { getMergedProjects, deleteProject } from "../data/projects";
 import { getMergedBlogPosts } from "../data/blog";
+import { StorageSetupButton } from "../components/StorageSetupButton";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -43,6 +44,10 @@ export default function AdminDashboard() {
     localStorage.removeItem("isAdminAuthenticated");
     localStorage.removeItem("isAdminLoggedIn");
     localStorage.removeItem("adminViewEnabled");
+
+    // Trigger custom event to notify context of logout
+    window.dispatchEvent(new Event('adminLoginChange'));
+
     navigate("/");
   };
 
@@ -91,6 +96,20 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Storage Setup Notice */}
+        <div className="mb-8">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">📦 Storage Setup</h3>
+            <p className="text-sm text-blue-700 mb-3">
+              Create the storage bucket for image uploads (only needed once):
+            </p>
+            <StorageSetupButton />
+            <p className="text-xs text-blue-600 mt-3">
+              ✅ Uploads use server-side processing to bypass security restrictions automatically.
+            </p>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-4 mb-8 border-b border-border">
           <button

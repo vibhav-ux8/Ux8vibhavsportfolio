@@ -1,1399 +1,1172 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
-import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router";
+import { motion, useScroll, useTransform } from "motion/react";
 import {
-  ArrowLeft,
   Save,
+  Image as ImageIcon,
+  Video,
+  Type,
+  Trash2,
+  Plus,
+  ArrowUp,
   Eye,
   CheckCircle,
-  Upload,
-  X,
-  Plus,
-  GripVertical,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  FileText,
-  BarChart3,
-  MessageSquare,
-  Sparkles,
-  Calendar,
-  Clock,
-  User,
-  Globe,
-  Github,
-  ExternalLink,
-  Palette,
-  Star,
-  Home,
-  Hash,
-  Tag,
-  Layers,
-  ChevronDown,
-  Play
+  ArrowLeft,
+  Edit2,
+  X
 } from "lucide-react";
+import { ImageUpload } from "../components/ImageUpload";
 
 interface ContentBlock {
   id: string;
-  type: "text" | "image" | "gallery" | "metrics" | "testimonial";
-  content: any;
+  type: "text" | "image" | "video";
+  content: string;
+  caption?: string;
+}
+
+interface Section {
+  id: string;
+  name: string;
+  content: ContentBlock[];
 }
 
 export default function AddProject() {
   const navigate = useNavigate();
-  const [isSaving, setIsSaving] = useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"saved" | "saving" | "">("");
 
-  // Form state
-  const [formData, setFormData] = useState({
-    title: "",
-    slug: "",
-    shortDescription: "",
-    fullDescription: "",
-    category: "",
-    tags: [] as string[],
-    featuredImage: null as File | null,
-    gallery: [] as File[],
-    embedUrl: "",
-    techStack: [] as string[],
-    status: "completed",
-    clientName: "",
-    projectDate: "",
-    duration: "",
-    liveDemoUrl: "",
-    githubUrl: "",
-    caseStudyUrl: "",
-    externalLinks: [] as { label: string; url: string }[],
-    isFeatured: false,
-    showOnHomepage: false,
-    priority: 1,
-    themeColor: "#000000",
-    metaTitle: "",
-    metaDescription: "",
-    ogImage: null as File | null
-  });
-
-  const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
-  const [currentTag, setCurrentTag] = useState("");
-  const [currentTech, setCurrentTech] = useState("");
-  const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
-
-  // File upload states
-  const [featuredImagePreview, setFeaturedImagePreview] = useState<string | null>(null);
-  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [isDraggingFeatured, setIsDraggingFeatured] = useState(false);
-  const [isDraggingGallery, setIsDraggingGallery] = useState(false);
-
-  // Refs for file inputs
-  const featuredImageInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const ogImageInputRef = useRef<HTMLInputElement>(null);
-
-  // File upload handlers
-  const handleFeaturedImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      setFormData((prev) => ({ ...prev, featuredImage: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => setFeaturedImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
-      if (imageFiles.length > 0) {
-        setFormData((prev) => ({ ...prev, gallery: [...prev.gallery, ...imageFiles] }));
-        imageFiles.forEach((file) => {
-          const reader = new FileReader();
-          reader.onloadend = () => setGalleryPreviews((prev) => [...prev, reader.result as string]);
-          reader.readAsDataURL(file);
-        });
-      }
-    }
-  };
-
-  const handleOgImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      setFormData((prev) => ({ ...prev, ogImage: file }));
-    }
-  };
-
-  // Case study subsections with toggle states and content
-  const [caseStudySections, setCaseStudySections] = useState([
-    { id: "00", name: "Cover", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "01", name: "Context", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "02", name: "Product Vision", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "03", name: "User Research", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "04", name: "Design Direction", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "05", name: "Methods & Processes", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "06", name: "Design Deliverables", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "07", name: "Analysis & Impact", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "08", name: "Future Scope", enabled: true, text: "", image: "", video: "", link: "" },
-    { id: "09", name: "Credits", enabled: true, text: "", image: "", video: "", link: "" }
-  ]);
+  const [activeSection, setActiveSection] = useState<string>("cover");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<string | null>(null);
+  const [editingSectionTitle, setEditingSectionTitle] = useState<string | null>(null);
+  const [sectionTitleValue, setSectionTitleValue] = useState("");
 
   useEffect(() => {
-    // Check authentication
     const isAuthenticated = localStorage.getItem("isAdminAuthenticated");
     if (!isAuthenticated) {
       navigate("/admin/login");
     }
   }, [navigate]);
 
-  // Auto-generate slug from title
-  useEffect(() => {
-    if (formData.title && !formData.slug) {
-      const slug = formData.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      setFormData((prev) => ({ ...prev, slug }));
-    }
-  }, [formData.title, formData.slug]);
+  // Initialize sections with default structure
+  const [sections, setSections] = useState<Section[]>([
+    {
+      id: "cover",
+      name: "00 Cover",
+      content: [
+        { id: "cover-hero", type: "image", content: "", caption: "" },
+        { id: "cover-thumb", type: "image", content: "", caption: "" },
+        { id: "cover-logo", type: "image", content: "", caption: "" },
+      ],
+    },
+    {
+      id: "context",
+      name: "01 Context",
+      content: [],
+    },
+    {
+      id: "product-vision",
+      name: "02 Product Vision",
+      content: [],
+    },
+    {
+      id: "user-research",
+      name: "03 User Research",
+      content: [],
+    },
+    {
+      id: "design-direction",
+      name: "04 Design Direction",
+      content: [],
+    },
+    {
+      id: "methods-processes",
+      name: "05 Methods & Processes",
+      content: [],
+    },
+    {
+      id: "design-deliverables",
+      name: "06 Design Deliverables",
+      content: [],
+    },
+    {
+      id: "analysis-impact",
+      name: "07 Analysis & Impact",
+      content: [],
+    },
+    {
+      id: "future-scope",
+      name: "08 Future Scope",
+      content: [],
+    },
+    {
+      id: "credits",
+      name: "09 Credits",
+      content: [],
+    },
+  ]);
 
-  // Auto-save functionality
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (formData.title) {
-        setAutoSaveStatus("saving");
-        setTimeout(() => {
-          localStorage.setItem("draft_project", JSON.stringify(formData));
-          setAutoSaveStatus("saved");
-          setTimeout(() => setAutoSaveStatus(""), 2000);
-        }, 500);
-      }
-    }, 2000);
+  const [basicInfo, setBasicInfo] = useState({
+    title: "",
+    description: "",
+    category: [] as string[],
+    sector: [] as string[],
+    tags: "",
+    year: new Date().getFullYear().toString(),
+    role: "",
+    thumbnail: "",
+    logoOverlay: "",
+    coverImage: "",
+  });
 
-    return () => clearTimeout(timer);
-  }, [formData]);
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddTag = () => {
-    if (currentTag && !formData.tags.includes(currentTag)) {
-      setFormData((prev) => ({ ...prev, tags: [...prev.tags, currentTag] }));
-      setCurrentTag("");
-    }
-  };
-
-  const handleRemoveTag = (tag: string) => {
-    setFormData((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
-  };
-
-  const handleAddTech = () => {
-    if (currentTech && !formData.techStack.includes(currentTech)) {
-      setFormData((prev) => ({ ...prev, techStack: [...prev.techStack, currentTech] }));
-      setCurrentTech("");
-    }
-  };
-
-  const handleRemoveTech = (tech: string) => {
-    setFormData((prev) => ({ ...prev, techStack: prev.techStack.filter((t) => t !== tech) }));
-  };
-
-  const handleAddExternalLink = () => {
-    setFormData((prev) => ({
-      ...prev,
-      externalLinks: [...prev.externalLinks, { label: "", url: "" }]
-    }));
-  };
-
-  const handleRemoveExternalLink = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      externalLinks: prev.externalLinks.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleUpdateExternalLink = (index: number, field: "label" | "url", value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      externalLinks: prev.externalLinks.map((link, i) =>
-        i === index ? { ...link, [field]: value } : link
-      )
-    }));
-  };
-
-  const handleAddContentBlock = (type: ContentBlock["type"]) => {
-    const newBlock: ContentBlock = {
-      id: Date.now().toString(),
-      type,
-      content: type === "metrics" ? [] : ""
-    };
-    setContentBlocks((prev) => [...prev, newBlock]);
-  };
-
-  const handleRemoveContentBlock = (id: string) => {
-    setContentBlocks((prev) => prev.filter((block) => block.id !== id));
-  };
-
-  const handleToggleCaseStudySection = (sectionId: string) => {
-    setCaseStudySections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId ? { ...section, enabled: !section.enabled } : section
-      )
-    );
-  };
-
-  const handleUpdateCaseStudySection = (sectionId: string, field: "text" | "image" | "video" | "link", value: string) => {
-    setCaseStudySections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId ? { ...section, [field]: value } : section
-      )
-    );
-  };
-
-  const handleDragStart = (id: string) => {
-    setDraggedBlock(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    if (draggedBlock && draggedBlock !== id) {
-      const draggedIndex = contentBlocks.findIndex((b) => b.id === draggedBlock);
-      const targetIndex = contentBlocks.findIndex((b) => b.id === id);
-      const newBlocks = [...contentBlocks];
-      const [removed] = newBlocks.splice(draggedIndex, 1);
-      newBlocks.splice(targetIndex, 0, removed);
-      setContentBlocks(newBlocks);
-    }
-  };
-
-  const handleSaveDraft = () => {
-    setIsSaving(true);
-    localStorage.setItem("draft_project", JSON.stringify({ ...formData, contentBlocks }));
-    setTimeout(() => {
-      setIsSaving(false);
-      alert("Draft saved successfully!");
-    }, 1000);
-  };
-
-  const handlePreview = () => {
-    window.open("/work/preview", "_blank");
-  };
-
-  const handlePublish = () => {
-    setIsSaving(true);
-    
-    // Convert File objects to data URLs for localStorage
-    const processedFormData = { ...formData };
-    
-    // Convert featured image to data URL
-    if (featuredImagePreview) {
-      processedFormData.featuredImage = featuredImagePreview as any;
-    }
-    
-    // Convert gallery images to data URLs
-    if (galleryPreviews.length > 0) {
-      processedFormData.gallery = galleryPreviews as any;
-    }
-    
-    // Create project object
-    const newProject = {
-      id: formData.slug || Date.now().toString(),
-      title: formData.title,
-      description: formData.shortDescription,
-      fullDescription: formData.fullDescription,
-      tags: formData.tags,
-      category: formData.category,
-      sector: "UI-UX Design",
-      thumbnail: featuredImagePreview || "https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80",
-      logoOverlay: formData.featuredImage ? featuredImagePreview : undefined,
-      icon: "Layers",
-      year: formData.projectDate || new Date().getFullYear().toString(),
-      role: formData.clientName || "Designer",
-      context: caseStudySections.find(s => s.id === "01")?.text || formData.fullDescription,
-      research: caseStudySections.find(s => s.id === "03")?.text || "",
-      designSystem: caseStudySections.find(s => s.id === "04")?.text || "",
-      prototyping: caseStudySections.find(s => s.id === "05")?.text || "",
-      outcome: caseStudySections.find(s => s.id === "07")?.text || "",
-      images: galleryPreviews.map((url, idx) => ({
-        url: url,
-        caption: `Project image ${idx + 1}`
-      })),
-      caseStudySections: caseStudySections.filter(s => s.enabled),
-      techStack: formData.techStack,
-      status: formData.status,
-      isFeatured: formData.isFeatured,
-      showOnHomepage: formData.showOnHomepage,
-      priority: formData.priority,
-      themeColor: formData.themeColor,
-      contentBlocks
-    };
-    
-    // Get existing new projects from localStorage
-    const existingProjects = localStorage.getItem("cmsNewProjects");
-    const projectsList = existingProjects ? JSON.parse(existingProjects) : [];
-    
-    // Add or update project
-    const existingIndex = projectsList.findIndex((p: any) => p.id === newProject.id);
-    if (existingIndex >= 0) {
-      projectsList[existingIndex] = newProject;
-    } else {
-      projectsList.push(newProject);
-    }
-    
-    // Save to localStorage
-    localStorage.setItem("cmsNewProjects", JSON.stringify(projectsList));
-    
-    console.log("Publishing project:", newProject);
-    
-    setTimeout(() => {
-      setIsSaving(false);
-      alert("Project published successfully!");
-      navigate("/admin/dashboard");
-    }, 1500);
-  };
-
-  const categories = [
+  // Category management
+  const [categories, setCategories] = useState([
     "LEA & Defence",
     "DPI & Governance",
     "IKS & Culture",
     "Healthcare",
     "Services",
     "e-commerce"
-  ];
+  ]);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editCategoryValue, setEditCategoryValue] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
-  const statuses = ["completed", "in-progress", "archived"];
+  // Domain management
+  const [domains, setDomains] = useState([
+    "UI-UX Design",
+    "Product Design",
+    "Communication",
+    "Game Design",
+    "Digital Illustration"
+  ]);
+  const [editingDomain, setEditingDomain] = useState<string | null>(null);
+  const [editDomainValue, setEditDomainValue] = useState("");
+  const [showAddDomain, setShowAddDomain] = useState(false);
+  const [newDomainName, setNewDomainName] = useState("");
+
+  const [projectImages, setProjectImages] = useState<Array<{ url: string; caption: string }>>([]);
+
+  const { scrollYProgress } = useScroll();
+  const progressBarScaleX = useTransform(scrollYProgress, [0, 1], [0, 1]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const handleScroll = () => {
+      if (isMounted) {
+        setShowScrollTop(window.scrollY > 600);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      isMounted = false;
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const offset = 100;
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: elementPosition - offset,
+        behavior: "smooth",
+      });
+      setActiveSection(sectionId);
+    }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const updateContent = (sectionId: string, blockId: string, newContent: string) => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              content: section.content.map((block) =>
+                block.id === blockId ? { ...block, content: newContent } : block
+              ),
+            }
+          : section
+      )
+    );
+  };
+
+  const updateCaption = (sectionId: string, blockId: string, newCaption: string) => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              content: section.content.map((block) =>
+                block.id === blockId ? { ...block, caption: newCaption } : block
+              ),
+            }
+          : section
+      )
+    );
+  };
+
+  const addContentBlock = (sectionId: string, type: "text" | "image" | "video") => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              content: [
+                ...section.content,
+                {
+                  id: `${sectionId}-${type}-${Date.now()}`,
+                  type,
+                  content: "",
+                  caption: type !== "text" ? "" : undefined,
+                },
+              ],
+            }
+          : section
+      )
+    );
+  };
+
+  const deleteContentBlock = (sectionId: string, blockId: string) => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              content: section.content.filter((block) => block.id !== blockId),
+            }
+          : section
+      )
+    );
+  };
+
+  const updateSectionTitle = (sectionId: string, newName: string) => {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? { ...section, name: newName }
+          : section
+      )
+    );
+  };
+
+  const handleEditSectionTitle = (sectionId: string, currentName: string) => {
+    setEditingSectionTitle(sectionId);
+    setSectionTitleValue(currentName);
+  };
+
+  const handleSaveSectionTitle = (sectionId: string) => {
+    if (sectionTitleValue.trim()) {
+      updateSectionTitle(sectionId, sectionTitleValue);
+    }
+    setEditingSectionTitle(null);
+    setSectionTitleValue("");
+  };
+
+  const addProjectImage = () => {
+    setProjectImages([...projectImages, { url: "", caption: "" }]);
+  };
+
+  const updateProjectImage = (index: number, field: "url" | "caption", value: string) => {
+    const updated = [...projectImages];
+    updated[index][field] = value;
+    setProjectImages(updated);
+  };
+
+  const deleteProjectImage = (index: number) => {
+    setProjectImages(projectImages.filter((_, i) => i !== index));
+  };
+
+  // Category management functions
+  const handleEditCategory = (category: string) => {
+    setEditingCategory(category);
+    setEditCategoryValue(category);
+  };
+
+  const handleSaveCategory = () => {
+    if (editingCategory && editCategoryValue && editCategoryValue !== editingCategory) {
+      const updatedCategories = categories.map(cat =>
+        cat === editingCategory ? editCategoryValue : cat
+      );
+      setCategories(updatedCategories);
+
+      // Update basicInfo if the edited category was selected
+      if (basicInfo.category.includes(editingCategory)) {
+        const updatedSelected = basicInfo.category.map(cat =>
+          cat === editingCategory ? editCategoryValue : cat
+        );
+        setBasicInfo({ ...basicInfo, category: updatedSelected });
+      }
+    }
+    setEditingCategory(null);
+    setEditCategoryValue("");
+  };
+
+  const handleDeleteCategory = (category: string) => {
+    if (confirm(`Are you sure you want to delete the category "${category}"?`)) {
+      setCategories(categories.filter(cat => cat !== category));
+
+      // Remove from basicInfo category if the deleted category was selected
+      if (basicInfo.category.includes(category)) {
+        setBasicInfo({
+          ...basicInfo,
+          category: basicInfo.category.filter(cat => cat !== category)
+        });
+      }
+    }
+  };
+
+  const toggleCategory = (category: string) => {
+    if (basicInfo.category.includes(category)) {
+      setBasicInfo({
+        ...basicInfo,
+        category: basicInfo.category.filter(cat => cat !== category)
+      });
+    } else {
+      setBasicInfo({
+        ...basicInfo,
+        category: [...basicInfo.category, category]
+      });
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (newCategoryName && !categories.includes(newCategoryName)) {
+      setCategories([...categories, newCategoryName]);
+      setNewCategoryName("");
+      setShowAddCategory(false);
+    } else if (categories.includes(newCategoryName)) {
+      alert("Category already exists!");
+    }
+  };
+
+  // Domain management functions
+  const handleEditDomain = (domain: string) => {
+    setEditingDomain(domain);
+    setEditDomainValue(domain);
+  };
+
+  const handleSaveDomain = () => {
+    if (editingDomain && editDomainValue && editDomainValue !== editingDomain) {
+      const updatedDomains = domains.map(dom =>
+        dom === editingDomain ? editDomainValue : dom
+      );
+      setDomains(updatedDomains);
+
+      // Update basicInfo if the edited domain was selected
+      if (basicInfo.sector.includes(editingDomain)) {
+        const updatedSelected = basicInfo.sector.map(dom =>
+          dom === editingDomain ? editDomainValue : dom
+        );
+        setBasicInfo({ ...basicInfo, sector: updatedSelected });
+      }
+    }
+    setEditingDomain(null);
+    setEditDomainValue("");
+  };
+
+  const handleDeleteDomain = (domain: string) => {
+    if (confirm(`Are you sure you want to delete the domain "${domain}"?`)) {
+      setDomains(domains.filter(dom => dom !== domain));
+
+      // Remove from basicInfo sector if the deleted domain was selected
+      if (basicInfo.sector.includes(domain)) {
+        setBasicInfo({
+          ...basicInfo,
+          sector: basicInfo.sector.filter(dom => dom !== domain)
+        });
+      }
+    }
+  };
+
+  const toggleDomain = (domain: string) => {
+    if (basicInfo.sector.includes(domain)) {
+      setBasicInfo({
+        ...basicInfo,
+        sector: basicInfo.sector.filter(dom => dom !== domain)
+      });
+    } else {
+      setBasicInfo({
+        ...basicInfo,
+        sector: [...basicInfo.sector, domain]
+      });
+    }
+  };
+
+  const handleAddDomain = () => {
+    if (newDomainName && !domains.includes(newDomainName)) {
+      setDomains([...domains, newDomainName]);
+      setNewDomainName("");
+      setShowAddDomain(false);
+    } else if (domains.includes(newDomainName)) {
+      alert("Domain already exists!");
+    }
+  };
+
+  const handleSaveDraft = () => {
+    const savedData = {
+      sections,
+      basicInfo,
+      projectImages,
+    };
+    localStorage.setItem("newProjectDraft", JSON.stringify(savedData));
+    alert("Draft saved successfully!");
+  };
+
+  const handlePublish = () => {
+    try {
+      if (!basicInfo.title || basicInfo.category.length === 0) {
+        alert("Please fill in at least the title and select at least one category before publishing.");
+        return;
+      }
+
+      // Generate slug from title
+      const slug = basicInfo.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
+      // Extract content from sections - use first text block in each section
+      const contextSection = sections.find((s) => s.id === "context");
+      const visionSection = sections.find((s) => s.id === "product-vision");
+      const directionSection = sections.find((s) => s.id === "design-direction");
+      const methodsSection = sections.find((s) => s.id === "methods-processes");
+      const impactSection = sections.find((s) => s.id === "analysis-impact");
+
+      const newProject = {
+        id: slug,
+        title: basicInfo.title,
+        description: basicInfo.description,
+        category: basicInfo.category,
+        sector: basicInfo.sector,
+        tags: basicInfo.tags.split(",").map((tag) => tag.trim()).filter(t => t),
+        year: basicInfo.year,
+        role: basicInfo.role,
+        thumbnail: sections.find((s) => s.id === "cover")?.content.find(c => c.id === "cover-thumb")?.content || "",
+        logoOverlay: sections.find((s) => s.id === "cover")?.content.find(c => c.id === "cover-logo")?.content || "",
+        coverImage: sections.find((s) => s.id === "cover")?.content.find(c => c.id === "cover-hero")?.content || "",
+        icon: "Layers",
+        context: contextSection?.content.find(c => c.type === "text")?.content || "",
+        research: visionSection?.content.find(c => c.type === "text")?.content || "",
+        designSystem: directionSection?.content.find(c => c.type === "text")?.content || "",
+        prototyping: methodsSection?.content.find(c => c.type === "text")?.content || "",
+        outcome: impactSection?.content.find(c => c.type === "text")?.content || "",
+        sectionsData: sections,
+        images: projectImages,
+      };
+
+      const existingProjects = localStorage.getItem("cmsNewProjects");
+      const projectsList = existingProjects ? JSON.parse(existingProjects) : [];
+
+      const existingIndex = projectsList.findIndex((p: any) => p.id === newProject.id);
+      if (existingIndex >= 0) {
+        projectsList[existingIndex] = newProject;
+      } else {
+        projectsList.push(newProject);
+      }
+
+      localStorage.setItem("cmsNewProjects", JSON.stringify(projectsList));
+
+      alert("Project published successfully!");
+      navigate("/work");
+    } catch (error) {
+      console.error("Error publishing project:", error);
+      alert("Error publishing project. Please try again.");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-muted/20">
-      {/* Header */}
-      <header className="bg-background border-b border-border sticky top-0 z-50">
-        <div className="max-w-[1800px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate("/admin/dashboard")}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Back to Dashboard</span>
-              </button>
-              <div className="h-6 w-[1px] bg-border" />
-              <div>
-                <h1 className="text-lg font-medium">Add New Project</h1>
-                <p className="text-xs text-muted-foreground">
-                  {autoSaveStatus === "saving" && "Saving..."}
-                  {autoSaveStatus === "saved" && "All changes saved"}
-                  {!autoSaveStatus && "Create a new portfolio project"}
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-background relative">
+      {/* Progress Bar */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-primary/90 to-primary z-[60] origin-left shadow-[0_1px_3px_rgba(0,82,255,0.4)]"
+        style={{ scaleX: progressBarScaleX }}
+      />
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSaveDraft}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                <span className="hidden sm:inline">Save Draft</span>
-              </button>
-              <button
-                onClick={handlePreview}
-                className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">Preview</span>
-              </button>
-              <button
-                onClick={handlePublish}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50"
-              >
-                <CheckCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">
-                  {isSaving ? "Publishing..." : "Publish Project"}
-                </span>
-              </button>
-            </div>
-          </div>
+      {/* Header - Floating Style */}
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 bg-background/95 backdrop-blur-sm border border-border z-50 rounded-full shadow-lg">
+        <div className="px-6 py-3 flex items-center gap-6">
+          <button
+            onClick={handleSaveDraft}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-muted rounded-full hover:bg-muted/80 transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            Save Draft
+          </button>
+          <button
+            onClick={handlePublish}
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
+          >
+            <CheckCircle className="w-4 h-4" />
+            Publish
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="max-w-[1800px] mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Project Details */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-background border border-border rounded-xl p-6"
+      {/* Left Navigation */}
+      <nav className="fixed left-6 top-1/2 -translate-y-1/2 z-40 hidden lg:block">
+        <div className="space-y-1 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl p-2 shadow-lg">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => scrollToSection(section.id)}
+              className={`block w-full text-left px-4 py-2.5 text-xs font-medium rounded-lg transition-all ${
+                activeSection === section.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "hover:bg-muted/50 text-muted-foreground"
+              }`}
             >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-muted rounded-lg">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium">Project Details</h2>
-                  <p className="text-sm text-muted-foreground">Basic information about your project</p>
+              {section.name}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="pt-24 pb-32 lg:pl-64">
+        <div className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-12">
+          {/* Back to Work Link */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <Link
+              to="/work"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft size={16} />
+              Back to Work
+            </Link>
+          </motion.div>
+
+          {/* Hero Cover Section */}
+          <div id="cover" className="scroll-mt-32 mb-20">
+            {basicInfo.thumbnail && (
+              <div className="relative min-h-[50vh] mb-12 rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  src={basicInfo.thumbnail}
+                  alt={basicInfo.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-medium text-white mb-4 tracking-tight">
+                    {basicInfo.title || "Project Title"}
+                  </h1>
+                  <p className="text-lg md:text-xl text-white/90 max-w-3xl">
+                    {basicInfo.description || "Project description"}
+                  </p>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-5">
+            {/* Basic Info Section */}
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50 rounded-2xl p-8 md:p-10 shadow-sm">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-1 h-8 bg-primary rounded-full" />
+                <h2 className="text-2xl font-medium">Basic Information</h2>
+              </div>
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Project Title *</label>
+                  <label className="block text-sm font-medium mb-3 text-muted-foreground">Project Title</label>
                   <input
                     type="text"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange("title", e.target.value)}
+                    value={basicInfo.title}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, title: e.target.value })}
+                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                     placeholder="Enter project title"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    URL Slug *
-                    <span className="text-xs text-muted-foreground ml-2">(Auto-generated from title)</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">/work/</span>
+                  <label className="block text-sm font-medium mb-3 text-muted-foreground">Description</label>
+                  <textarea
+                    value={basicInfo.description}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                    placeholder="Brief project description"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-muted-foreground">Category</label>
+                      <button
+                        onClick={() => setShowAddCategory(true)}
+                        className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                        type="button"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add
+                      </button>
+                    </div>
+                    <div className="space-y-2 p-4 bg-background border border-border/60 rounded-xl max-h-[280px] overflow-y-auto">
+                      {categories.map((category) => (
+                        <div key={category} className="flex items-center justify-between group">
+                          {editingCategory === category ? (
+                            <div className="flex items-center gap-2 flex-1">
+                              <input
+                                type="text"
+                                value={editCategoryValue}
+                                onChange={(e) => setEditCategoryValue(e.target.value)}
+                                className="flex-1 px-3 py-1 text-sm border border-primary rounded-lg outline-none"
+                                autoFocus
+                                onKeyPress={(e) => e.key === "Enter" && handleSaveCategory()}
+                              />
+                              <button
+                                onClick={handleSaveCategory}
+                                className="text-green-600 hover:text-green-700"
+                                type="button"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingCategory(null);
+                                  setEditCategoryValue("");
+                                }}
+                                className="text-muted-foreground hover:text-foreground"
+                                type="button"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  value={category}
+                                  checked={basicInfo.category.includes(category)}
+                                  onChange={() => toggleCategory(category)}
+                                  className="w-4 h-4 border-2 border-border rounded bg-white text-primary focus:ring-2 focus:ring-primary/20"
+                                />
+                                <span className="text-sm">{category}</span>
+                              </label>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleEditCategory(category)}
+                                  className="p-1 hover:bg-muted rounded"
+                                  title="Edit"
+                                  type="button"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteCategory(category)}
+                                  className="p-1 hover:bg-red-50 hover:text-red-600 rounded"
+                                  title="Delete"
+                                  type="button"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add Category Modal */}
+                    {showAddCategory && (
+                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="bg-background border border-border rounded-xl p-6 max-w-md w-full mx-4"
+                        >
+                          <h3 className="text-lg font-medium mb-4">Add New Category</h3>
+                          <input
+                            type="text"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="Enter category name"
+                            className="w-full px-4 py-2 border border-border rounded-lg mb-4"
+                            autoFocus
+                            onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
+                          />
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => {
+                                setShowAddCategory(false);
+                                setNewCategoryName("");
+                              }}
+                              className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
+                              type="button"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleAddCategory}
+                              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                              type="button"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </motion.div>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-muted-foreground">Domain</label>
+                      <button
+                        onClick={() => setShowAddDomain(true)}
+                        className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                        type="button"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add
+                      </button>
+                    </div>
+                    <div className="space-y-2 p-4 bg-background border border-border/60 rounded-xl max-h-[280px] overflow-y-auto">
+                      {domains.map((domain) => (
+                        <div key={domain} className="flex items-center justify-between group">
+                          {editingDomain === domain ? (
+                            <div className="flex items-center gap-2 flex-1">
+                              <input
+                                type="text"
+                                value={editDomainValue}
+                                onChange={(e) => setEditDomainValue(e.target.value)}
+                                className="flex-1 px-3 py-1 text-sm border border-primary rounded-lg outline-none"
+                                autoFocus
+                                onKeyPress={(e) => e.key === "Enter" && handleSaveDomain()}
+                              />
+                              <button
+                                onClick={handleSaveDomain}
+                                className="text-green-600 hover:text-green-700"
+                                type="button"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingDomain(null);
+                                  setEditDomainValue("");
+                                }}
+                                className="text-muted-foreground hover:text-foreground"
+                                type="button"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  value={domain}
+                                  checked={basicInfo.sector.includes(domain)}
+                                  onChange={() => toggleDomain(domain)}
+                                  className="w-4 h-4 border-2 border-border rounded bg-white text-primary focus:ring-2 focus:ring-primary/20"
+                                />
+                                <span className="text-sm">{domain}</span>
+                              </label>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleEditDomain(domain)}
+                                  className="p-1 hover:bg-muted rounded"
+                                  title="Edit"
+                                  type="button"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteDomain(domain)}
+                                  className="p-1 hover:bg-red-50 hover:text-red-600 rounded"
+                                  title="Delete"
+                                  type="button"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add Domain Modal */}
+                    {showAddDomain && (
+                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="bg-background border border-border rounded-xl p-6 max-w-md w-full mx-4"
+                        >
+                          <h3 className="text-lg font-medium mb-4">Add New Domain</h3>
+                          <input
+                            type="text"
+                            value={newDomainName}
+                            onChange={(e) => setNewDomainName(e.target.value)}
+                            placeholder="Enter domain name"
+                            className="w-full px-4 py-2 border border-border rounded-lg mb-4"
+                            autoFocus
+                            onKeyPress={(e) => e.key === "Enter" && handleAddDomain()}
+                          />
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => {
+                                setShowAddDomain(false);
+                                setNewDomainName("");
+                              }}
+                              className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
+                              type="button"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleAddDomain}
+                              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                              type="button"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </motion.div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-3 text-muted-foreground">Tags (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={basicInfo.tags}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, tags: e.target.value })}
+                    className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                    placeholder="UX Design, AI, Enterprise"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-3 text-muted-foreground">Role</label>
                     <input
                       type="text"
-                      value={formData.slug}
-                      onChange={(e) => handleInputChange("slug", e.target.value)}
-                      placeholder="project-slug"
-                      className="flex-1 px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={basicInfo.role}
+                      onChange={(e) => setBasicInfo({ ...basicInfo, role: e.target.value })}
+                      className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                      placeholder="Lead Designer, UX Researcher"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-3 text-muted-foreground">Year</label>
+                    <input
+                      type="text"
+                      value={basicInfo.year}
+                      onChange={(e) => setBasicInfo({ ...basicInfo, year: e.target.value })}
+                      className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                      placeholder="2024"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Short Description *</label>
-                  <textarea
-                    value={formData.shortDescription}
-                    onChange={(e) => handleInputChange("shortDescription", e.target.value)}
-                    placeholder="Brief description for project cards (1-2 sentences)"
-                    rows={2}
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  />
-                </div>
+                {/* Cover Images */}
+                <div className="pt-6 border-t border-border/40">
+                  <h3 className="text-sm font-medium mb-4 text-muted-foreground">Cover Images</h3>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Full Description</label>
-                  <textarea
-                    value={formData.fullDescription}
-                    onChange={(e) => handleInputChange("fullDescription", e.target.value)}
-                    placeholder="Detailed project description..."
-                    rows={6}
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Category *</label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => handleInputChange("category", e.target.value)}
-                      className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary appearance-none bg-background"
-                    >
-                      <option value="">Select category</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Cover Image (Hero Background) */}
+                  <div className="mb-6">
+                    <label className="block text-sm mb-2">Cover Image (Hero Background)</label>
+                    <p className="text-xs text-muted-foreground mb-3">Large background image that appears behind the title and description on the project page</p>
+                    <div className="max-w-2xl">
+                      <ImageUpload
+                        value={sections.find((s) => s.id === "cover")?.content.find(c => c.id === "cover-hero")?.content || ""}
+                        onChange={(url) => {
+                          updateContent("cover", "cover-hero", url);
+                          setBasicInfo({ ...basicInfo, coverImage: url });
+                        }}
+                        path="projects/covers/"
+                        label="Drop cover image (recommended: 1920x1080 or larger)"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => handleInputChange("status", e.target.value)}
-                      className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary appearance-none bg-background"
-                    >
-                      {statuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm mb-2">Thumbnail Image</label>
+                      <div className="max-w-sm">
+                        <ImageUpload
+                          value={sections.find((s) => s.id === "cover")?.content.find(c => c.id === "cover-thumb")?.content || ""}
+                          onChange={(url) => {
+                            updateContent("cover", "cover-thumb", url);
+                            setBasicInfo({ ...basicInfo, thumbnail: url });
+                          }}
+                          path="projects/thumbnails/"
+                          label="Drop thumbnail image"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-2">Logo Overlay (Optional)</label>
+                      <div className="max-w-xs">
+                        <ImageUpload
+                          value={sections.find((s) => s.id === "cover")?.content.find(c => c.id === "cover-logo")?.content || ""}
+                          onChange={(url) => {
+                            updateContent("cover", "cover-logo", url);
+                            setBasicInfo({ ...basicInfo, logoOverlay: url });
+                          }}
+                          path="projects/logos/"
+                          label="Drop logo overlay"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tags</label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {formData.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm"
-                      >
-                        <Tag className="w-3 h-3" />
-                        {tag}
+          {/* Content Sections */}
+          {sections.filter(s => s.id !== "cover").map((section, sectionIndex) => (
+            <motion.div
+              key={section.id}
+              id={section.id}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: sectionIndex * 0.1 }}
+              className="scroll-mt-32 mb-20"
+            >
+              <div className="bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50 rounded-2xl p-8 md:p-10 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-1 h-8 bg-primary rounded-full" />
+                    {editingSectionTitle === section.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="text"
+                          value={sectionTitleValue}
+                          onChange={(e) => setSectionTitleValue(e.target.value)}
+                          className="text-2xl font-medium px-3 py-1 border-2 border-primary rounded-lg outline-none flex-1"
+                          autoFocus
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              handleSaveSectionTitle(section.id);
+                            }
+                          }}
+                        />
                         <button
-                          onClick={() => handleRemoveTag(tag)}
-                          className="hover:text-destructive transition-colors"
+                          onClick={() => handleSaveSectionTitle(section.id)}
+                          className="p-2 text-green-600 hover:text-green-700"
+                          type="button"
                         >
-                          <X className="w-3 h-3" />
+                          <CheckCircle className="w-5 h-5" />
                         </button>
-                      </span>
-                    ))}
+                        <button
+                          onClick={() => {
+                            setEditingSectionTitle(null);
+                            setSectionTitleValue("");
+                          }}
+                          className="p-2 text-muted-foreground hover:text-foreground"
+                          type="button"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <h2
+                        className="text-2xl font-medium cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => handleEditSectionTitle(section.id, section.name)}
+                      >
+                        {section.name}
+                      </h2>
+                    )}
                   </div>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={currentTag}
-                      onChange={(e) => setCurrentTag(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
-                      placeholder="Add a tag..."
-                      className="flex-1 px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
                     <button
-                      onClick={handleAddTag}
-                      className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                      onClick={() => addContentBlock(section.id, "text")}
+                      className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                      title="Add Text"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Type className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => addContentBlock(section.id, "image")}
+                      className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                      title="Add Image"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => addContentBlock(section.id, "video")}
+                      className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                      title="Add Video"
+                    >
+                      <Video className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              </div>
-            </motion.div>
 
-            {/* Media Upload */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="bg-background border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-muted rounded-lg">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium">Media</h2>
-                  <p className="text-sm text-muted-foreground">Upload images and videos</p>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Featured Image *</label>
-                  <div
-                    onClick={() => featuredImageInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
-                      isDraggingFeatured ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                    }`}
-                    onDragEnter={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsDraggingFeatured(true);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsDraggingFeatured(false);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsDraggingFeatured(false);
-                      const file = e.dataTransfer.files[0];
-                      if (file && file.type.startsWith("image/")) {
-                        setFormData((prev) => ({ ...prev, featuredImage: file }));
-                        const reader = new FileReader();
-                        reader.onloadend = () => setFeaturedImagePreview(reader.result as string);
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  >
-                    {featuredImagePreview ? (
-                      <div className="relative">
-                        <img src={featuredImagePreview} alt="Featured" className="max-h-48 mx-auto rounded" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFeaturedImagePreview(null);
-                            setFormData((prev) => ({ ...prev, featuredImage: null }));
-                          }}
-                          className="absolute top-2 right-2 p-1 bg-destructive text-white rounded-full hover:bg-destructive/90"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : isDraggingFeatured ? (
-                      <p className="text-sm text-primary font-medium mb-2">Drop image here</p>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Drag and drop or click to upload
-                        </p>
-                        <p className="text-xs text-muted-foreground">Recommended: 1200x800px, JPG or PNG</p>
-                      </>
-                    )}
-                    <input 
-                      ref={featuredImageInputRef}
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={handleFeaturedImageChange}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Project Gallery</label>
-                  <div
-                    onClick={() => galleryInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
-                      isDraggingGallery ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                    }`}
-                    onDragEnter={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsDraggingGallery(true);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsDraggingGallery(false);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsDraggingGallery(false);
-                      const files = e.dataTransfer.files;
-                      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
-                      if (imageFiles.length > 0) {
-                        setFormData((prev) => ({ ...prev, gallery: [...prev.gallery, ...imageFiles] }));
-                        imageFiles.forEach((file) => {
-                          const reader = new FileReader();
-                          reader.onloadend = () => setGalleryPreviews((prev) => [...prev, reader.result as string]);
-                          reader.readAsDataURL(file);
-                        });
-                      }
-                    }}
-                  >
-                    {galleryPreviews.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2 mb-3">
-                        {galleryPreviews.map((preview, idx) => (
-                          <div key={idx} className="relative aspect-square">
-                            <img src={preview} alt={`Gallery ${idx}`} className="w-full h-full object-cover rounded" />
+                <div className="space-y-6">
+                  {section.content.map((block) => (
+                    <div key={block.id} className="group relative">
+                      {block.type === "text" && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs text-muted-foreground">Text Block</label>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setGalleryPreviews((prev) => prev.filter((_, i) => i !== idx));
-                                setFormData((prev) => ({ 
-                                  ...prev, 
-                                  gallery: prev.gallery.filter((_, i) => i !== idx) 
-                                }));
-                              }}
-                              className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full hover:bg-destructive/90"
+                              onClick={() => deleteContentBlock(section.id, block.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
                             >
-                              <X className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    ) : null}
-                    {isDraggingGallery ? (
-                      <p className="text-sm text-primary font-medium mb-2">Drop images here</p>
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Upload multiple images
-                        </p>
-                        <p className="text-xs text-muted-foreground">You can select multiple files at once</p>
-                      </>
-                    )}
-                    <input 
-                      ref={galleryInputRef}
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*" 
-                      multiple
-                      onChange={handleGalleryChange}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Video/Prototype Embed URL</label>
-                  <input
-                    type="url"
-                    value={formData.embedUrl}
-                    onChange={(e) => handleInputChange("embedUrl", e.target.value)}
-                    placeholder="YouTube, Vimeo, or Figma prototype URL"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Case Study Builder */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="bg-background border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-muted rounded-lg">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-medium">Case Study Builder</h2>
-                    <p className="text-sm text-muted-foreground">Add modular content blocks</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAddContentBlock("text")}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="Add Text Block"
-                  >
-                    <FileText className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleAddContentBlock("image")}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="Add Image Block"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleAddContentBlock("gallery")}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="Add Gallery Block"
-                  >
-                    <Layers className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleAddContentBlock("metrics")}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="Add Metrics Block"
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleAddContentBlock("testimonial")}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="Add Testimonial Block"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Case Study Subsections */}
-              <div className="mb-6">
-                <div className="mb-4">
-                  <h3 className="font-medium mb-1">Case Study Sections</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Toggle sections to include in your case study
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  {caseStudySections.map((section) => (
-                    <div
-                      key={section.id}
-                      className="bg-background border border-border rounded-lg overflow-hidden"
-                    >
-                      <div className="flex items-center justify-between p-3 hover:bg-muted/20 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-mono text-muted-foreground w-6">
-                            {section.id}
-                          </span>
-                          <span className="text-sm font-medium">{section.name}</span>
-                        </div>
-                        <button
-                          onClick={() => handleToggleCaseStudySection(section.id)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors border ${
-                            section.enabled ? "bg-foreground border-foreground" : "bg-muted-foreground/20 border-border"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full transition-transform ${
-                              section.enabled ? "bg-white translate-x-6" : "bg-muted-foreground translate-x-1"
-                            }`}
+                          <textarea
+                            value={block.content}
+                            onChange={(e) => updateContent(section.id, block.id, e.target.value)}
+                            rows={4}
+                            className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                            placeholder="Enter text content..."
                           />
-                        </button>
-                      </div>
+                        </div>
+                      )}
 
-                      {section.enabled && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="border-t border-border p-4 space-y-3"
-                        >
-                          <div>
-                            <label className="block text-xs font-medium mb-1.5 text-muted-foreground">
-                              Text Content
-                            </label>
-                            <textarea
-                              value={section.text}
-                              onChange={(e) => handleUpdateCaseStudySection(section.id, "text", e.target.value)}
-                              placeholder="Enter section text content..."
-                              rows={4}
-                              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-medium mb-1.5 text-muted-foreground">
-                              Image URL
-                            </label>
-                            <div className="relative">
-                              <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <input
-                                type="url"
-                                value={section.image}
-                                onChange={(e) => handleUpdateCaseStudySection(section.id, "image", e.target.value)}
-                                placeholder="https://example.com/image.jpg"
-                                className="w-full pl-10 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
+                      {block.type === "image" && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs text-muted-foreground">Image Block</label>
+                            <div className="flex gap-2">
+                              {block.content && (
+                                <button
+                                  onClick={() => updateContent(section.id, block.id, '')}
+                                  className="p-1 hover:bg-yellow-50 hover:text-yellow-600 rounded text-xs"
+                                  title="Clear image"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                              <button
+                                onClick={() => deleteContentBlock(section.id, block.id)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
+                          <ImageUpload
+                            value={block.content}
+                            onChange={(url) => updateContent(section.id, block.id, url)}
+                            path={`projects/${section.id}/`}
+                            label={block.caption || "Drop image"}
+                          />
+                          <input
+                            type="text"
+                            value={block.caption || ""}
+                            onChange={(e) => updateCaption(section.id, block.id, e.target.value)}
+                            placeholder="Image caption (optional)"
+                            className="mt-2 w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                          />
+                        </div>
+                      )}
 
-                          <div>
-                            <label className="block text-xs font-medium mb-1.5 text-muted-foreground">
-                              Video URL
-                            </label>
-                            <div className="relative">
-                              <Play className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <input
-                                type="url"
-                                value={section.video}
-                                onChange={(e) => handleUpdateCaseStudySection(section.id, "video", e.target.value)}
-                                placeholder="https://youtube.com/watch?v=..."
-                                className="w-full pl-10 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
-                            </div>
+                      {block.type === "video" && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs text-muted-foreground">Video Block</label>
+                            <button
+                              onClick={() => deleteContentBlock(section.id, block.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
-
-                          <div>
-                            <label className="block text-xs font-medium mb-1.5 text-muted-foreground">
-                              Related Link
-                            </label>
-                            <div className="relative">
-                              <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <input
-                                type="url"
-                                value={section.link}
-                                onChange={(e) => handleUpdateCaseStudySection(section.id, "link", e.target.value)}
-                                placeholder="https://..."
-                                className="w-full pl-10 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
+                          <input
+                            type="url"
+                            value={block.content}
+                            onChange={(e) => updateContent(section.id, block.id, e.target.value)}
+                            placeholder="YouTube or Vimeo URL"
+                            className="w-full px-4 py-3 bg-background border border-border/60 rounded-xl text-base focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                          />
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
+            </motion.div>
+          ))}
 
-              {/* Additional Content Blocks */}
-              <div className="mt-8 pt-6 border-t border-border">
-                <div className="mb-4">
-                  <h3 className="font-medium mb-1">Additional Content Blocks</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Add extra modular blocks for rich content
-                  </p>
+          {/* Project Gallery */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="scroll-mt-32 mb-20"
+          >
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 border border-border/50 rounded-2xl p-8 md:p-10 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-1 h-8 bg-primary rounded-full" />
+                  <h2 className="text-2xl font-medium">Project Gallery</h2>
                 </div>
-              {contentBlocks.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
-                  <Layers className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground mb-2">No content blocks yet</p>
-                  <p className="text-xs text-muted-foreground">Click the icons above to add blocks</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {contentBlocks.map((block) => (
-                    <div
-                      key={block.id}
-                      draggable
-                      onDragStart={() => handleDragStart(block.id)}
-                      onDragOver={(e) => handleDragOver(e, block.id)}
-                      className="flex items-center gap-3 p-4 border border-border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-move"
-                    >
-                      <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          {block.type === "text" && <FileText className="w-4 h-4" />}
-                          {block.type === "image" && <ImageIcon className="w-4 h-4" />}
-                          {block.type === "gallery" && <Layers className="w-4 h-4" />}
-                          {block.type === "metrics" && <BarChart3 className="w-4 h-4" />}
-                          {block.type === "testimonial" && <MessageSquare className="w-4 h-4" />}
-                          <span className="text-sm font-medium capitalize">{block.type} Block</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Drag to reorder • Click to edit
-                        </p>
-                      </div>
+                <button
+                  onClick={addProjectImage}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Image
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {projectImages.map((img, index) => (
+                  <div key={index} className="group relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs text-muted-foreground">Gallery Image {index + 1}</label>
                       <button
-                        onClick={() => handleRemoveContentBlock(block.id)}
-                        className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
+                        onClick={() => deleteProjectImage(index)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 hover:text-destructive rounded"
                       >
-                        <X className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-              </div>
-            </motion.div>
-
-            {/* Project Metadata */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-              className="bg-background border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-muted rounded-lg">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium">Metadata</h2>
-                  <p className="text-sm text-muted-foreground">Additional project information</p>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tech Stack</label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {formData.techStack.map((tech) => (
-                      <span
-                        key={tech}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        {tech}
-                        <button
-                          onClick={() => handleRemoveTech(tech)}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
+                    <ImageUpload
+                      value={img.url}
+                      onChange={(url) => updateProjectImage(index, "url", url)}
+                      path="projects/gallery/"
+                      label="Drop gallery image"
+                    />
                     <input
                       type="text"
-                      value={currentTech}
-                      onChange={(e) => setCurrentTech(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTech())}
-                      placeholder="Add technology..."
-                      className="flex-1 px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <button
-                      onClick={handleAddTech}
-                      className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Client Name</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={formData.clientName}
-                        onChange={(e) => handleInputChange("clientName", e.target.value)}
-                        placeholder="Client or company name"
-                        className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Project Date</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={formData.projectDate}
-                        onChange={(e) => handleInputChange("projectDate", e.target.value)}
-                        placeholder="e.g., 2024-2025"
-                        className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Project Duration</label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={formData.duration}
-                      onChange={(e) => handleInputChange("duration", e.target.value)}
-                      placeholder="e.g., 6 months"
-                      className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={img.caption}
+                      onChange={(e) => updateProjectImage(index, "caption", e.target.value)}
+                      placeholder="Image caption (optional)"
+                      className="mt-2 w-full px-3 py-2 bg-background border border-border/60 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                     />
                   </div>
-                </div>
+                ))}
+                {projectImages.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">No gallery images yet. Click "Add Image" to get started.</p>
+                  </div>
+                )}
               </div>
-            </motion.div>
-
-            {/* Links Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
-              className="bg-background border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-muted rounded-lg">
-                  <LinkIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium">Links</h2>
-                  <p className="text-sm text-muted-foreground">External project links</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Live Demo URL</label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="url"
-                      value={formData.liveDemoUrl}
-                      onChange={(e) => handleInputChange("liveDemoUrl", e.target.value)}
-                      placeholder="https://..."
-                      className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">GitHub Repository</label>
-                  <div className="relative">
-                    <Github className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="url"
-                      value={formData.githubUrl}
-                      onChange={(e) => handleInputChange("githubUrl", e.target.value)}
-                      placeholder="https://github.com/..."
-                      className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Case Study URL</label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="url"
-                      value={formData.caseStudyUrl}
-                      onChange={(e) => handleInputChange("caseStudyUrl", e.target.value)}
-                      placeholder="https://..."
-                      className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-medium">Additional Links</label>
-                    <button
-                      onClick={handleAddExternalLink}
-                      className="flex items-center gap-1 text-sm text-primary hover:text-primary/80"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Link
-                    </button>
-                  </div>
-                  {formData.externalLinks.map((link, index) => (
-                    <div key={index} className="grid grid-cols-[1fr,2fr,auto] gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={link.label}
-                        onChange={(e) => handleUpdateExternalLink(index, "label", e.target.value)}
-                        placeholder="Label"
-                        className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                      />
-                      <input
-                        type="url"
-                        value={link.url}
-                        onChange={(e) => handleUpdateExternalLink(index, "url", e.target.value)}
-                        placeholder="URL"
-                        className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                      />
-                      <button
-                        onClick={() => handleRemoveExternalLink(index)}
-                        className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* SEO Settings */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.5 }}
-              className="bg-background border border-border rounded-xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-muted rounded-lg">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-medium">SEO Settings</h2>
-                  <p className="text-sm text-muted-foreground">Search engine optimization</p>
-                </div>
-              </div>
-
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Meta Title</label>
-                  <input
-                    type="text"
-                    value={formData.metaTitle}
-                    onChange={(e) => handleInputChange("metaTitle", e.target.value)}
-                    placeholder="Project title for search engines"
-                    maxLength={60}
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.metaTitle.length}/60 characters
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Meta Description</label>
-                  <textarea
-                    value={formData.metaDescription}
-                    onChange={(e) => handleInputChange("metaDescription", e.target.value)}
-                    placeholder="Brief description for search results"
-                    maxLength={160}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.metaDescription.length}/160 characters
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Open Graph Image</label>
-                  <div 
-                    onClick={() => ogImageInputRef.current?.click()}
-                    className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                  >
-                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">
-                      {formData.ogImage ? formData.ogImage.name : 'Recommended: 1200x630px'}
-                    </p>
-                    <input 
-                      ref={ogImageInputRef}
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={handleOgImageChange}
-                    />
-                  </div>
-                </div>
-
-                {/* SEO Preview */}
-                <div className="pt-4 border-t border-border">
-                  <p className="text-sm font-medium mb-3">Search Preview</p>
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <p className="text-blue-600 text-sm mb-1">
-                      {formData.metaTitle || formData.title || "Project Title"}
-                    </p>
-                    <p className="text-xs text-green-700 mb-2">
-                      ux8.in › work › {formData.slug || "project-slug"}
-                    </p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {formData.metaDescription || formData.shortDescription || "Project description will appear here"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Sidebar - Settings & Preview */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              {/* Portfolio Showcase Settings */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                className="bg-background border border-border rounded-xl p-6"
-              >
-                <h3 className="text-sm font-medium mb-4">Portfolio Settings</h3>
-                <div className="space-y-4">
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">Featured Project</span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        checked={formData.isFeatured}
-                        onChange={(e) => handleInputChange("isFeatured", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-primary transition-colors" />
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-background rounded-full transition-transform peer-checked:translate-x-5" />
-                    </div>
-                  </label>
-
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <Home className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">Show on Homepage</span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        checked={formData.showOnHomepage}
-                        onChange={(e) => handleInputChange("showOnHomepage", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-primary transition-colors" />
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-background rounded-full transition-transform peer-checked:translate-x-5" />
-                    </div>
-                  </label>
-
-                  <div>
-                    <label className="flex items-center gap-2 text-sm mb-2">
-                      <Hash className="w-4 h-4 text-muted-foreground" />
-                      Display Order
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.priority}
-                      onChange={(e) => handleInputChange("priority", parseInt(e.target.value) || 1)}
-                      min="1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 text-sm mb-2">
-                      <Palette className="w-4 h-4 text-muted-foreground" />
-                      Theme Color
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={formData.themeColor}
-                        onChange={(e) => handleInputChange("themeColor", e.target.value)}
-                        className="w-12 h-12 border border-border rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={formData.themeColor}
-                        onChange={(e) => handleInputChange("themeColor", e.target.value)}
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Project Preview Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-                className="bg-background border border-border rounded-xl p-6"
-              >
-                <h3 className="text-sm font-medium mb-4">Card Preview</h3>
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="aspect-video bg-muted flex items-center justify-center">
-                    <ImageIcon className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      {formData.tags.slice(0, 2).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs px-2 py-1 bg-muted rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <h4 className="font-medium mb-1 line-clamp-1">
-                      {formData.title || "Project Title"}
-                    </h4>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {formData.shortDescription || "Short description will appear here"}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Quick Stats */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                className="bg-background border border-border rounded-xl p-6"
-              >
-                <h3 className="text-sm font-medium mb-4">Project Stats</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Status</span>
-                    <span className="font-medium capitalize">{formData.status.replace("-", " ")}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Content Blocks</span>
-                    <span className="font-medium">{contentBlocks.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Tags</span>
-                    <span className="font-medium">{formData.tags.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Tech Stack</span>
-                    <span className="font-medium">{formData.techStack.length}</span>
-                  </div>
-                </div>
-              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
+
+      {/* Scroll to Top */}
+      {showScrollTop && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-40 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </motion.button>
+      )}
     </div>
   );
 }

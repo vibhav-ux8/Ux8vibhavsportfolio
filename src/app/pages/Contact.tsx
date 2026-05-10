@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
-import { Mail, Linkedin, Send } from "lucide-react";
+import { Mail, Linkedin, Send, Edit2 } from "lucide-react";
 import { motion } from "motion/react";
+import dealIcon from "../../imports/deal.png";
+import { useAdminView } from "../contexts/AdminViewContext";
 
 export default function Contact() {
+  const { isAdminView } = useAdminView();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -12,6 +15,22 @@ export default function Contact() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [pageTitle, setPageTitle] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('contactPageTitle');
+      return saved || "Get in Touch";
+    }
+    return "Get in Touch";
+  });
+  const [pageDescription, setPageDescription] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('contactPageDescription');
+      return saved || "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.";
+    }
+    return "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.";
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +49,28 @@ export default function Contact() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleSaveTitle = () => {
+    localStorage.setItem('contactPageTitle', pageTitle);
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelTitle = () => {
+    const saved = localStorage.getItem('contactPageTitle');
+    setPageTitle(saved || "Get in Touch");
+    setIsEditingTitle(false);
+  };
+
+  const handleSaveDescription = () => {
+    localStorage.setItem('contactPageDescription', pageDescription);
+    setIsEditingDescription(false);
+  };
+
+  const handleCancelDescription = () => {
+    const saved = localStorage.getItem('contactPageDescription');
+    setPageDescription(saved || "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.");
+    setIsEditingDescription(false);
   };
 
   // Animation variants
@@ -74,12 +115,94 @@ export default function Contact() {
               transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="h-1 bg-gradient-to-r from-primary to-purple-600 mb-8 rounded-full"
             />
-            <h1 className="text-[56px] md:text-[72px] lg:text-[88px] font-medium mb-6 tracking-[-0.03em] leading-[0.95]" style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}>
-              Get in Touch
-            </h1>
-            <p className="text-[19px] md:text-[21px] text-muted-foreground max-w-4xl leading-[1.6] tracking-[-0.011em]">
-              I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.
-            </p>
+            <div className="relative group">
+              {isEditingTitle ? (
+                <div className="space-y-3 mb-6">
+                  <input
+                    type="text"
+                    value={pageTitle}
+                    onChange={(e) => setPageTitle(e.target.value)}
+                    className="w-full px-4 py-3 text-[56px] md:text-[72px] lg:text-[88px] font-medium tracking-[-0.03em] leading-[0.95] border border-border/60 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                    autoFocus
+                    style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveTitle}
+                      className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelTitle}
+                      className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <h1 className="text-[56px] md:text-[72px] lg:text-[88px] font-medium mb-6 tracking-[-0.03em] leading-[0.95] inline-flex items-center gap-4" style={{ fontFeatureSettings: "'ss01' on, 'cv05' on, 'cv08' on" }}>
+                  <span>{pageTitle}</span>
+                  <img
+                    src={dealIcon}
+                    alt="handshake"
+                    className="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 page-icon flex-shrink-0"
+                  />
+                  {isAdminView && (
+                    <button
+                      onClick={() => setIsEditingTitle(true)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg"
+                      title="Edit title"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </h1>
+              )}
+            </div>
+            <div className="relative group max-w-4xl">
+              {isEditingDescription ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={pageDescription}
+                    onChange={(e) => setPageDescription(e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 text-[19px] md:text-[21px] text-muted-foreground leading-[1.6] tracking-[-0.011em] border border-border/60 rounded-xl bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveDescription}
+                      className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelDescription}
+                      className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[19px] md:text-[21px] text-muted-foreground leading-[1.6] tracking-[-0.011em]">
+                    {pageDescription}
+                  </p>
+                  {isAdminView && (
+                    <button
+                      onClick={() => setIsEditingDescription(true)}
+                      className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-muted rounded-lg"
+                      title="Edit description"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </motion.div>
 
           <motion.div 

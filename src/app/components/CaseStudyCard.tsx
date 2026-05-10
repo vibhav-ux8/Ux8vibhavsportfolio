@@ -32,7 +32,7 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
   };
 
   const handleEdit = () => {
-    navigate(`/admin/dashboard/edit-project/${project.id}`);
+    navigate(`/work/edit/${project.id}`);
   };
 
   const handleDuplicate = () => {
@@ -53,8 +53,9 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
 
   const handleMoveTo = () => {
     const categories = ['AI & Machine Learning', 'Enterprise SaaS', 'Public Sector', 'Design Systems', 'E-commerce', 'Other'];
-    const currentCategory = project.category;
-    const otherCategories = categories.filter(c => c !== currentCategory);
+    const currentCategory = Array.isArray(project.category) ? project.category.join(', ') : project.category;
+    const currentCategoryArray = Array.isArray(project.category) ? project.category : [project.category];
+    const otherCategories = categories.filter(c => !currentCategoryArray.includes(c));
 
     const choice = prompt(
       `Move "${project.title}" to:\n\nCurrent: ${currentCategory}\n\nEnter new category:\n${otherCategories.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nOr type a custom category:`
@@ -87,42 +88,71 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
       if (onUpdate) onUpdate();
     }
   };
+
+  const handleArchive = () => {
+    const isCurrentlyArchived = project.archived || false;
+    const action = isCurrentlyArchived ? 'Unarchive' : 'Archive';
+    const message = isCurrentlyArchived
+      ? `Unarchive "${project.title}"?\n\nThis project will be visible in public view again.`
+      : `Archive "${project.title}"?\n\nArchived projects will be hidden from the public view but can be restored later.`;
+
+    if (confirm(message)) {
+      const savedEdits = localStorage.getItem("cmsProjectsData");
+      const editsData = savedEdits ? JSON.parse(savedEdits) : {};
+
+      editsData[project.id] = {
+        ...editsData[project.id],
+        archived: !isCurrentlyArchived
+      };
+
+      localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
+      if (onUpdate) onUpdate();
+      alert(`"${project.title}" has been ${isCurrentlyArchived ? 'unarchived' : 'archived'}.`);
+    }
+  };
   
   return (
     <motion.div
       whileHover={{ y: -10, scale: 1.016 }}
-      transition={{ 
-        duration: 0.5, 
+      transition={{
+        duration: 0.5,
         ease: [0.25, 0.1, 0.25, 1.0]
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="group relative border-2 border-border rounded-2xl hover:border-primary/50 transition-all duration-500 h-full flex flex-col overflow-hidden"
+      className="group relative border-2 border-border rounded-2xl hover:border-primary/50 transition-all duration-500 h-full flex flex-col"
     >
       <Link
         to={`/work/${project.id}`}
-        className="block relative h-full flex flex-col"
+        className="block relative h-full flex flex-col overflow-hidden rounded-[14px]"
       >
         {/* Admin Action Menu */}
         {isAdminView && (
-          <AdminActionMenu
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
-            onMoveTo={handleMoveTo}
-            onDelete={handleDelete}
-            itemType="project"
-          />
+          <div className="absolute top-0 left-0 z-20">
+            <AdminActionMenu
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+              isArchived={project.archived || false}
+            />
+          </div>
         )}
-
+        {/* Archived Badge */}
+        {isAdminView && project.archived === true && (
+          <div className="absolute top-3 right-3 z-10 px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-full shadow-lg">
+            Archived
+          </div>
+        )}
         {/* Thumbnail */}
         <motion.div
           transition={{
             duration: 0.5,
             ease: [0.25, 0.1, 0.25, 1.0]
           }}
-          className="relative aspect-[16/10] overflow-hidden bg-muted flex-shrink-0"
+          className="relative aspect-[16/10] overflow-hidden bg-muted flex-shrink-0 rounded-t-[14px]"
           style={{ perspective: '1500px' }}
         >
           <motion.div
@@ -188,13 +218,29 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
           </p>
 
           {/* Category and Sector */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="inline-block px-4 py-1 rounded-[4px] text-[11px] font-medium bg-foreground/80 text-background tracking-normal">
-              {project.category}
-            </span>
-            <span className="inline-block px-4 py-1 rounded-[4px] text-[11px] font-medium bg-foreground/80 text-background tracking-normal">
-              {project.sector}
-            </span>
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            {Array.isArray(project.category) ? (
+              project.category.map((cat, idx) => (
+                <span key={idx} className="inline-block px-4 py-1 rounded-[4px] text-[11px] font-medium bg-foreground/80 text-background tracking-normal">
+                  {cat}
+                </span>
+              ))
+            ) : (
+              <span className="inline-block px-4 py-1 rounded-[4px] text-[11px] font-medium bg-foreground/80 text-background tracking-normal">
+                {project.category}
+              </span>
+            )}
+            {Array.isArray(project.sector) ? (
+              project.sector.map((sec, idx) => (
+                <span key={idx} className="inline-block px-4 py-1 rounded-[4px] text-[11px] font-medium bg-foreground/80 text-background tracking-normal">
+                  {sec}
+                </span>
+              ))
+            ) : (
+              <span className="inline-block px-4 py-1 rounded-[4px] text-[11px] font-medium bg-foreground/80 text-background tracking-normal">
+                {project.sector}
+              </span>
+            )}
           </div>
 
           {/* Year and View Link */}
