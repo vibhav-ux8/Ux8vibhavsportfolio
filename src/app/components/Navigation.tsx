@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { Menu, X, Moon, Sun } from "lucide-react";
 import { House, UserCircle, Briefcase, PenNib, EnvelopeSimple } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logoImage from "figma:asset/d817f10c5a8dcea24cbac0c933d18bd131f71370.png";
 import { useAdminView } from "../contexts/AdminViewContext";
 import { useTheme } from "../contexts/ThemeContext";
