@@ -1,24 +1,16 @@
 import { Link, useLocation } from "react-router";
 import { Menu, X, Moon, Sun } from "lucide-react";
 import { House, UserCircle, Briefcase, PenNib, EnvelopeSimple } from "@phosphor-icons/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import logoImage from "figma:asset/d817f10c5a8dcea24cbac0c933d18bd131f71370.png";
 import { useAdminView } from "../contexts/AdminViewContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { supabase } from "../lib/supabase";
 
 export function Navigation() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const { isAdminView } = useAdminView();
+  const { isAdminView, isLoggedIn, toggleAdminView } = useAdminView();
   const { theme, toggleTheme } = useTheme();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setIsLoggedIn(!!s));
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -75,11 +67,19 @@ export function Navigation() {
               </Link>
             ))}
 
-            {/* Admin indicator when logged in */}
+            {/* Admin/Preview toggle when logged in */}
             {isLoggedIn && (
-              <span className="text-xs font-medium text-primary border border-primary/30 rounded-full px-2 py-0.5">
-                {isAdminView ? "Admin" : "Admin"}
-              </span>
+              <button
+                onClick={toggleAdminView}
+                className={`text-xs font-medium rounded-full px-3 py-1 border transition-colors duration-300 ${
+                  isAdminView
+                    ? "text-primary border-primary/30 hover:bg-primary/10"
+                    : "text-muted-foreground border-border hover:text-foreground"
+                }`}
+                title={isAdminView ? "Switch to public view" : "Switch to admin view"}
+              >
+                {isAdminView ? "Admin" : "Preview"}
+              </button>
             )}
 
             {/* Theme Toggle */}

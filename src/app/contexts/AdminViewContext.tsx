@@ -3,29 +3,34 @@ import { supabase } from '../lib/supabase';
 
 interface AdminViewContextType {
   isAdminView: boolean;
+  isLoggedIn: boolean;
+  toggleAdminView: () => void;
 }
 
 const AdminViewContext = createContext<AdminViewContextType | undefined>(undefined);
 
 export function AdminViewProvider({ children }: { children: ReactNode }) {
-  const [isAdminView, setIsAdminView] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminViewEnabled, setAdminViewEnabled] = useState(true);
 
   useEffect(() => {
-    // Check current session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAdminView(!!session);
+      setIsLoggedIn(!!session);
     });
 
-    // React to sign-in / sign-out in real time (also works across tabs)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdminView(!!session);
+      setIsLoggedIn(!!session);
+      if (!session) setAdminViewEnabled(true); // reset toggle on logout
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  const isAdminView = isLoggedIn && adminViewEnabled;
+  const toggleAdminView = () => setAdminViewEnabled(prev => !prev);
+
   return (
-    <AdminViewContext.Provider value={{ isAdminView }}>
+    <AdminViewContext.Provider value={{ isAdminView, isLoggedIn, toggleAdminView }}>
       {children}
     </AdminViewContext.Provider>
   );
