@@ -494,7 +494,7 @@ export default function CaseStudy() {
   }, [isFullscreen]);
   
   if (!project) {
-    return <Navigate to="/projects" replace />;
+    return <Navigate to="/work" replace />;
   }
 
   // Redirect if project is archived and user is not in admin view
@@ -3413,7 +3413,7 @@ export default function CaseStudy() {
                   <div className="flex-1"></div>
 
                   {/* View All Projects and Contact Me - Right Side */}
-                  <Link to="/projects">
+                  <Link to="/work">
                     <motion.button
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.98 }}
