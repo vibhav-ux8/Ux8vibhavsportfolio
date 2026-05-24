@@ -1,6 +1,6 @@
 import { useParams, Link, Navigate } from "react-router";
 import { getProjectById } from "../data/projects";
-import { ArrowLeft, ArrowUp, Layers, ThumbsUp, Heart, Mail, Save, Type, Image as ImageIcon, Video, Trash2, Upload } from "lucide-react";
+import { ArrowUp, Layers, ThumbsUp, Heart, Mail, Save, Type, Image as ImageIcon, Video, Trash2, Upload } from "lucide-react";
 import { ArrowsOut, ArrowsIn, CaretLeft, CaretRight, Plus, Minus } from "@phosphor-icons/react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { Navigation } from "../components/Navigation";
@@ -3398,21 +3398,7 @@ export default function CaseStudy() {
                   {/* Spacer to push right buttons to the end */}
                   <div className="flex-1"></div>
 
-                  {/* View All Projects and Contact Me - Right Side */}
-                  <Link to="/projects">
-                    <motion.button
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="group flex items-center gap-2.5 px-5 py-3 bg-background hover:bg-primary/8 border border-primary/25 hover:border-primary/40 rounded-lg transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-sm hover:shadow-md"
-                    >
-                      <ArrowLeft size={16} className="text-primary/90 transition-all duration-400 group-hover:-translate-x-0.5" strokeWidth={2.2} />
-                      <span className="text-[14px] font-medium text-primary/90 tracking-[-0.006em] transition-colors duration-400">
-                        View all projects
-                      </span>
-                    </motion.button>
-                  </Link>
-
+                  {/* Contact Me - Right Side */}
                   <Link to="/contact">
                     <motion.button
                       whileHover={{ y: -2 }}
