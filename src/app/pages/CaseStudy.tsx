@@ -87,14 +87,11 @@ export default function CaseStudy() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
-  // Reload project data whenever id or cmsStore changes
-  const [project, setProject] = useState(id ? getProjectById(id, store) : undefined);
+  const project = id ? getProjectById(id, store) : undefined;
   const [editableProject, setEditableProject] = useState(project);
 
   useEffect(() => {
-    const freshProject = id ? getProjectById(id, store) : undefined;
-    setProject(freshProject);
-    setEditableProject(freshProject);
+    setEditableProject(id ? getProjectById(id, store) : undefined);
   }, [id, store]);
 
   const handleSaveChanges = async () => {
