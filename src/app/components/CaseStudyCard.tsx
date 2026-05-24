@@ -8,6 +8,7 @@ import React from "react";
 import { useAdminView } from "../contexts/AdminViewContext";
 import { AdminActionMenu } from "./AdminActionMenu";
 import { deleteProject } from "../data/projects";
+import { useCMS } from "../contexts/CMSContext";
 
 interface CaseStudyCardProps {
   project: Project;
@@ -22,6 +23,7 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
   const [isTouched, setIsTouched] = React.useState(false);
   const { isAdminView } = useAdminView();
   const navigate = useNavigate();
+  const { store, setStore } = useCMS();
 
   const handleTouchStart = () => {
     setIsTouched(true);
@@ -35,23 +37,21 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
     navigate(`/work/edit/${project.id}`);
   };
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
     const newProject = {
       ...project,
       id: `${project.id}-copy-${Date.now()}`,
       title: `${project.title} (Copy)`
     };
 
-    const newProjects = localStorage.getItem("cmsNewProjects");
-    const projectsList = newProjects ? JSON.parse(newProjects) : [];
-    projectsList.push(newProject);
-    localStorage.setItem("cmsNewProjects", JSON.stringify(projectsList));
+    const projectsList: Project[] = store['cmsNewProjects'] ?? [];
+    await setStore('cmsNewProjects', [...projectsList, newProject]);
 
     if (onUpdate) onUpdate();
     alert(`"${project.title}" duplicated successfully!`);
   };
 
-  const handleMoveTo = () => {
+  const handleMoveTo = async () => {
     const categories = ['AI & Machine Learning', 'Enterprise SaaS', 'Public Sector', 'Design Systems', 'E-commerce', 'Other'];
     const currentCategory = Array.isArray(project.category) ? project.category.join(', ') : project.category;
     const currentCategoryArray = Array.isArray(project.category) ? project.category : [project.category];
@@ -67,45 +67,32 @@ export function CaseStudyCard({ project, isFlipped = false, onFlip, onUpdate }: 
         : otherCategories[Number(choice) - 1];
 
       if (selectedCategory) {
-        const savedEdits = localStorage.getItem("cmsProjectsData");
-        const editsData = savedEdits ? JSON.parse(savedEdits) : {};
-
-        editsData[project.id] = {
-          ...editsData[project.id],
-          category: selectedCategory
-        };
-
-        localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
+        const editsData: Record<string, any> = store['cmsProjectsData'] ?? {};
+        const updated = { ...editsData, [project.id]: { ...editsData[project.id], category: selectedCategory } };
+        await setStore('cmsProjectsData', updated);
         if (onUpdate) onUpdate();
         alert(`"${project.title}" moved to "${selectedCategory}"!`);
       }
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm(`Are you sure you want to delete "${project.title}"?\n\nThis action cannot be undone.`)) {
-      deleteProject(project.id);
+      await deleteProject(project.id, store, setStore);
       if (onUpdate) onUpdate();
     }
   };
 
-  const handleArchive = () => {
+  const handleArchive = async () => {
     const isCurrentlyArchived = project.archived || false;
-    const action = isCurrentlyArchived ? 'Unarchive' : 'Archive';
     const message = isCurrentlyArchived
       ? `Unarchive "${project.title}"?\n\nThis project will be visible in public view again.`
       : `Archive "${project.title}"?\n\nArchived projects will be hidden from the public view but can be restored later.`;
 
     if (confirm(message)) {
-      const savedEdits = localStorage.getItem("cmsProjectsData");
-      const editsData = savedEdits ? JSON.parse(savedEdits) : {};
-
-      editsData[project.id] = {
-        ...editsData[project.id],
-        archived: !isCurrentlyArchived
-      };
-
-      localStorage.setItem("cmsProjectsData", JSON.stringify(editsData));
+      const editsData: Record<string, any> = store['cmsProjectsData'] ?? {};
+      const updated = { ...editsData, [project.id]: { ...editsData[project.id], archived: !isCurrentlyArchived } };
+      await setStore('cmsProjectsData', updated);
       if (onUpdate) onUpdate();
       alert(`"${project.title}" has been ${isCurrentlyArchived ? 'unarchived' : 'archived'}.`);
     }

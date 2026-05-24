@@ -1,7 +1,23 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Linkedin, Mail, Github } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 export function Footer() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setIsLoggedIn(!!s));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
   return (
     <footer className="border-t border-border mt-32">
       <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12">
@@ -52,12 +68,21 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Vibhav Kamat. All rights reserved.
             </p>
-            <Link
-              to="/admin/login"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Admin Login
-            </Link>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                to="/admin/login"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Admin Login
+              </Link>
+            )}
           </div>
         </div>
       </div>

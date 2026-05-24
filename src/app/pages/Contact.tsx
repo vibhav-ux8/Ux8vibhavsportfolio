@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
 import { Mail, Linkedin, Send, Edit2 } from "lucide-react";
 import { motion } from "motion/react";
 import dealIcon from "../../imports/deal.png";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
+
+const DEFAULT_CONTACT_TITLE = "Get in Touch";
+const DEFAULT_CONTACT_DESC = "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.";
 
 export default function Contact() {
   const { isAdminView } = useAdminView();
+  const { store, loading, setStore } = useCMS();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,20 +23,15 @@ export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [pageTitle, setPageTitle] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('contactPageTitle');
-      return saved || "Get in Touch";
+  const [pageTitle, setPageTitle] = useState(store['contactPageTitle'] ?? DEFAULT_CONTACT_TITLE);
+  const [pageDescription, setPageDescription] = useState(store['contactPageDescription'] ?? DEFAULT_CONTACT_DESC);
+
+  useEffect(() => {
+    if (!loading) {
+      setPageTitle(store['contactPageTitle'] ?? DEFAULT_CONTACT_TITLE);
+      setPageDescription(store['contactPageDescription'] ?? DEFAULT_CONTACT_DESC);
     }
-    return "Get in Touch";
-  });
-  const [pageDescription, setPageDescription] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('contactPageDescription');
-      return saved || "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.";
-    }
-    return "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.";
-  });
+  }, [loading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,25 +52,23 @@ export default function Contact() {
     });
   };
 
-  const handleSaveTitle = () => {
-    localStorage.setItem('contactPageTitle', pageTitle);
+  const handleSaveTitle = async () => {
+    await setStore('contactPageTitle' as CMSKey, pageTitle);
     setIsEditingTitle(false);
   };
 
   const handleCancelTitle = () => {
-    const saved = localStorage.getItem('contactPageTitle');
-    setPageTitle(saved || "Get in Touch");
+    setPageTitle(store['contactPageTitle'] ?? DEFAULT_CONTACT_TITLE);
     setIsEditingTitle(false);
   };
 
-  const handleSaveDescription = () => {
-    localStorage.setItem('contactPageDescription', pageDescription);
+  const handleSaveDescription = async () => {
+    await setStore('contactPageDescription' as CMSKey, pageDescription);
     setIsEditingDescription(false);
   };
 
   const handleCancelDescription = () => {
-    const saved = localStorage.getItem('contactPageDescription');
-    setPageDescription(saved || "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders. Feel free to reach out.");
+    setPageDescription(store['contactPageDescription'] ?? DEFAULT_CONTACT_DESC);
     setIsEditingDescription(false);
   };
 

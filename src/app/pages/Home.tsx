@@ -9,9 +9,59 @@ import ux8IconSvg from "../../imports/UX8_icon.svg";
 import dharmicFuturesIcon from "figma:asset/3814864fe79b8dfaf3cac21e9286d36e89b8d371.png";
 import srujanalayaIcon from "figma:asset/b923f899c2bae651111cebc7798a8737cf209542.png";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
+
+const defaultHomeData = {
+  hero: {
+    heading1: "Envisioning smart UI-UX",
+    heading2: "with contextual awareness",
+    subtitle: "Bridging AI innovation, enterprise systems, and public-sector digital infrastructure through strategic design leadership.",
+    button1: "View Projects",
+    button2: "Let's Connect"
+  },
+  approach: {
+    heading: "Design is the bridge between complex problems and elegant solutions that scale",
+    subheading: "I transform organizational challenges into intuitive experiences through strategic systems thinking, rigorous research, and human-centered design.",
+    processTitle: "Quick Design Process",
+    processSubtitle: "A rigorous, iterative approach balancing user needs with business objectives"
+  },
+  organizations: {
+    heading: "Impact Beyond Design",
+    subheading: "Contributing to organizations and initiatives that shape the future of design, culture, and technology",
+    ux8Description: "Fostering design excellence and innovation through community-driven initiatives and collaborative learning experiences.",
+    dharmicDescription: "Exploring intersections of technology, ethics, and cultural wisdom to build more inclusive and sustainable digital futures.",
+    srujanalayaDescription: "Championing creative expression and cultural preservation through design, connecting traditional wisdom with contemporary practice."
+  },
+  about: {
+    heading: "About",
+    paragraph1: "Design Leader with 10+ years of experience across UI/UX, Product Design, Visual Design, and Strategic Design, delivering digital products designed for scale, performance, and measurable impact across Digital Public Infrastructure, Cybersecurity, Defence, FinTech, Governance, and B2B/B2C platforms.",
+    paragraph2: "I specialise in AI Product Design, Agentic AI Interfaces, Human-AI Interaction, Explainable AI (XAI), Design Systems, and Data-Driven Decision Platforms — translating complex, high-stakes systems into intuitive, secure, and trust-centered user experiences built for global scalability.",
+    paragraph3: "My approach combines first-principles thinking, human-centered design, systems thinking, and responsible AI integration, enabling products that scale across users, geographies, and enterprise environments.",
+    learnMoreText: "Learn more about my background"
+  },
+  contact: {
+    heading: "Get in Touch",
+    subheading: "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders.",
+    connectLabel: "Connect with me",
+    emailLabel: "Email",
+    emailText: "vibhav.ux8@gmail.com",
+    linkedinLabel: "LinkedIn",
+    linkedinText: "Connect professionally",
+    nameLabel: "Name",
+    namePlaceholder: "Your full name",
+    emailPlaceholder: "your.email@example.com",
+    messageLabel: "Message",
+    messagePlaceholder: "Tell me about your project or opportunity...",
+    submitButton: "Send Message",
+    successButton: "Message Sent Successfully!",
+    successMessage: "Thank you for reaching out! I'll get back to you within 24-48 hours."
+  }
+};
 
 export default function Home() {
   const { isAdminView } = useAdminView();
+  const { store, loading, setStore } = useCMS();
   const logoRef = useRef<HTMLImageElement>(null);
 
   // Set initial logo color and update on theme changes
@@ -36,129 +86,26 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  // Load CMS data from localStorage
-  const [cmsData, setCmsData] = useState<any>({
-    hero: {
-      heading1: "Envisioning smart UI-UX",
-      heading2: "with contextual awareness",
-      subtitle: "Bridging AI innovation, enterprise systems, and public-sector digital infrastructure through strategic design leadership.",
-      button1: "View Projects",
-      button2: "Let's Connect"
-    },
-    approach: {
-      heading: "Design is the bridge between complex problems and elegant solutions that scale",
-      subheading: "I transform organizational challenges into intuitive experiences through strategic systems thinking, rigorous research, and human-centered design.",
-      processTitle: "Quick Design Process",
-      processSubtitle: "A rigorous, iterative approach balancing user needs with business objectives"
-    },
-    organizations: {
-      heading: "Impact Beyond Design",
-      subheading: "Contributing to organizations and initiatives that shape the future of design, culture, and technology",
-      ux8Description: "Fostering design excellence and innovation through community-driven initiatives and collaborative learning experiences.",
-      dharmicDescription: "Exploring intersections of technology, ethics, and cultural wisdom to build more inclusive and sustainable digital futures.",
-      srujanalayaDescription: "Championing creative expression and cultural preservation through design, connecting traditional wisdom with contemporary practice."
-    },
-    about: {
-      heading: "About",
-      paragraph1: "Design Leader with 10+ years of experience across UI/UX, Product Design, Visual Design, and Strategic Design, delivering digital products designed for scale, performance, and measurable impact across Digital Public Infrastructure, Cybersecurity, Defence, FinTech, Governance, and B2B/B2C platforms.",
-      paragraph2: "I specialise in AI Product Design, Agentic AI Interfaces, Human-AI Interaction, Explainable AI (XAI), Design Systems, and Data-Driven Decision Platforms — translating complex, high-stakes systems into intuitive, secure, and trust-centered user experiences built for global scalability.",
-      paragraph3: "My approach combines first-principles thinking, human-centered design, systems thinking, and responsible AI integration, enabling products that scale across users, geographies, and enterprise environments.",
-      learnMoreText: "Learn more about my background"
-    },
-    contact: {
-      heading: "Get in Touch",
-      subheading: "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders.",
-      connectLabel: "Connect with me",
-      emailLabel: "Email",
-      emailText: "vibhav.ux8@gmail.com",
-      linkedinLabel: "LinkedIn",
-      linkedinText: "Connect professionally",
-      nameLabel: "Name",
-      namePlaceholder: "Your full name",
-      emailPlaceholder: "your.email@example.com",
-      messageLabel: "Message",
-      messagePlaceholder: "Tell me about your project or opportunity...",
-      submitButton: "Send Message",
-      successButton: "Message Sent Successfully!",
-      successMessage: "Thank you for reaching out! I'll get back to you within 24-48 hours."
-    }
+  const mergeCMSData = (saved: any) => ({
+    hero: { ...defaultHomeData.hero, ...(saved?.hero ?? {}) },
+    approach: { ...defaultHomeData.approach, ...(saved?.approach ?? {}) },
+    organizations: { ...defaultHomeData.organizations, ...(saved?.organizations ?? {}) },
+    about: { ...defaultHomeData.about, ...(saved?.about ?? {}) },
+    contact: { ...defaultHomeData.contact, ...(saved?.contact ?? {}) },
   });
 
+  const [cmsData, setCmsData] = useState<any>(() => mergeCMSData(store['cmsHomeData']));
   const [hasChanges, setHasChanges] = useState(false);
   const contentRefs = useRef<{ [key: string]: string }>({});
 
+  // Sync from context once CMS finishes loading
   useEffect(() => {
-    const defaultData = {
-      hero: {
-        heading1: "Envisioning smart UI-UX",
-        heading2: "with contextual awareness",
-        subtitle: "Bridging AI innovation, enterprise systems, and public-sector digital infrastructure through strategic design leadership.",
-        button1: "View Projects",
-        button2: "Let's Connect"
-      },
-      approach: {
-        heading: "Design is the bridge between complex problems and elegant solutions that scale",
-        subheading: "I transform organizational challenges into intuitive experiences through strategic systems thinking, rigorous research, and human-centered design.",
-        processTitle: "Quick Design Process",
-        processSubtitle: "A rigorous, iterative approach balancing user needs with business objectives"
-      },
-      organizations: {
-        heading: "Impact Beyond Design",
-        subheading: "Contributing to organizations and initiatives that shape the future of design, culture, and technology",
-        ux8Description: "Fostering design excellence and innovation through community-driven initiatives and collaborative learning experiences.",
-        dharmicDescription: "Exploring intersections of technology, ethics, and cultural wisdom to build more inclusive and sustainable digital futures.",
-        srujanalayaDescription: "Championing creative expression and cultural preservation through design, connecting traditional wisdom with contemporary practice."
-      },
-      about: {
-        heading: "About",
-        paragraph1: "Design Leader with 10+ years of experience across UI/UX, Product Design, Visual Design, and Strategic Design, delivering digital products designed for scale, performance, and measurable impact across Digital Public Infrastructure, Cybersecurity, Defence, FinTech, Governance, and B2B/B2C platforms.",
-        paragraph2: "I specialise in AI Product Design, Agentic AI Interfaces, Human-AI Interaction, Explainable AI (XAI), Design Systems, and Data-Driven Decision Platforms — translating complex, high-stakes systems into intuitive, secure, and trust-centered user experiences built for global scalability.",
-        paragraph3: "My approach combines first-principles thinking, human-centered design, systems thinking, and responsible AI integration, enabling products that scale across users, geographies, and enterprise environments.",
-        learnMoreText: "Learn more about my background"
-      },
-      contact: {
-        heading: "Get in Touch",
-        subheading: "I'm always interested in hearing about new opportunities, collaborations, or just connecting with fellow designers and product leaders.",
-        connectLabel: "Connect with me",
-        emailLabel: "Email",
-        emailText: "vibhav.ux8@gmail.com",
-        linkedinLabel: "LinkedIn",
-        linkedinText: "Connect professionally",
-        nameLabel: "Name",
-        namePlaceholder: "Your full name",
-        emailPlaceholder: "your.email@example.com",
-        messageLabel: "Message",
-        messagePlaceholder: "Tell me about your project or opportunity...",
-        submitButton: "Send Message",
-        successButton: "Message Sent Successfully!",
-        successMessage: "Thank you for reaching out! I'll get back to you within 24-48 hours."
-      }
-    };
-
-    const saved = localStorage.getItem("cmsHomeData");
-    if (saved) {
-      try {
-        const savedData = JSON.parse(saved);
-        // Deep merge saved data with defaults
-        const mergedData = {
-          hero: { ...defaultData.hero, ...savedData.hero },
-          approach: { ...defaultData.approach, ...savedData.approach },
-          organizations: { ...defaultData.organizations, ...savedData.organizations },
-          about: { ...defaultData.about, ...savedData.about },
-          contact: { ...defaultData.contact, ...savedData.contact }
-        };
-        setCmsData(mergedData);
-        contentRefs.current = JSON.parse(JSON.stringify(mergedData));
-      } catch (e) {
-        console.error("Error loading CMS data:", e);
-        setCmsData(defaultData);
-        contentRefs.current = JSON.parse(JSON.stringify(defaultData));
-      }
-    } else {
-      setCmsData(defaultData);
-      contentRefs.current = JSON.parse(JSON.stringify(defaultData));
+    if (!loading) {
+      const merged = mergeCMSData(store['cmsHomeData']);
+      setCmsData(merged);
+      contentRefs.current = JSON.parse(JSON.stringify(merged));
     }
-  }, []);
+  }, [loading]);
 
   const handleContentEdit = (path: string, value: string) => {
     setHasChanges(true);
@@ -175,17 +122,10 @@ export default function Home() {
     setCmsData(newData);
   };
 
-  const handleSave = () => {
-    localStorage.setItem("cmsHomeData", JSON.stringify(cmsData));
+  const handleSave = async () => {
+    await setStore('cmsHomeData' as CMSKey, cmsData);
     setHasChanges(false);
-    console.log("Saved CMS Data:", cmsData);
-    alert("Home page updated successfully!");
   };
-
-  // Debug: Log current data
-  useEffect(() => {
-    console.log("Current CMS Data:", cmsData);
-  }, [cmsData]);
 
   const [formData, setFormData] = useState({
     name: "",

@@ -5,13 +5,20 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { Hammer, Eye, Sparkles, Save, Edit3, Settings, Trash2, Upload } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { useAdminView } from "../contexts/AdminViewContext";
+import { useCMS } from "../contexts/CMSContext";
+import { uploadImage } from "../lib/supabase";
+import type { CMSKey } from "../lib/cms";
 import profileImage from "../../imports/Vibhav_photo_3-1.png";
 
 export default function About() {
   const { isAdminView } = useAdminView();
+  const { store, loading, setStore, removeStore } = useCMS();
   const [hasChanges, setHasChanges] = useState(false);
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
-  const [customProfileImage, setCustomProfileImage] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [customProfileImage, setCustomProfileImage] = useState<string | null>(
+    store['cmsAboutProfileImage'] ?? null
+  );
   const photoMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,35 +54,21 @@ export default function About() {
     }
   };
 
-  // Load CMS data from localStorage
-  const [cmsData, setCmsData] = useState<any>(defaultData);
+  const mergeAboutData = (saved: any) => ({
+    hero: { ...defaultData.hero, ...(saved?.hero ?? {}) },
+    biography: { ...defaultData.biography, ...(saved?.biography ?? {}) },
+    designApproach: { ...defaultData.designApproach, ...(saved?.designApproach ?? {}) },
+  });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("cmsAboutData");
-    if (saved) {
-      try {
-        const savedData = JSON.parse(saved);
-        // Deep merge with defaults
-        const mergedData = {
-          hero: { ...defaultData.hero, ...savedData.hero },
-          biography: { ...defaultData.biography, ...savedData.biography },
-          designApproach: { ...defaultData.designApproach, ...savedData.designApproach }
-        };
-        setCmsData(mergedData);
-      } catch (e) {
-        console.error("Error loading About CMS data:", e);
-        setCmsData(defaultData);
-      }
-    }
-  }, []);
+  const [cmsData, setCmsData] = useState<any>(() => mergeAboutData(store['cmsAboutData']));
 
-  // Load custom profile image from localStorage
+  // Sync from context once CMS finishes loading
   useEffect(() => {
-    const savedImage = localStorage.getItem("cmsAboutProfileImage");
-    if (savedImage && savedImage.trim() !== "") {
-      setCustomProfileImage(savedImage);
+    if (!loading) {
+      setCmsData(mergeAboutData(store['cmsAboutData']));
+      setCustomProfileImage(store['cmsAboutProfileImage'] ?? null);
     }
-  }, []);
+  }, [loading]);
 
   // Handle click outside photo menu
   useEffect(() => {
@@ -108,13 +101,9 @@ export default function About() {
     setCmsData(newData);
   };
 
-  const handleSave = () => {
-    localStorage.setItem("cmsAboutData", JSON.stringify(cmsData));
-    if (customProfileImage) {
-      localStorage.setItem("cmsAboutProfileImage", customProfileImage);
-    }
+  const handleSave = async () => {
+    await setStore('cmsAboutData' as CMSKey, cmsData);
     setHasChanges(false);
-    console.log("Saved About CMS Data:", cmsData);
     alert("About page updated successfully!");
   };
 
@@ -123,25 +112,27 @@ export default function About() {
     setShowPhotoMenu(false);
   };
 
-  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setCustomProfileImage(result);
-        setHasChanges(true);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadImage(file, 'profile/');
+      setCustomProfileImage(url);
+      await setStore('cmsAboutProfileImage' as CMSKey, url);
+    } catch (err) {
+      console.error('Profile photo upload failed:', err);
+      alert('Photo upload failed. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
-  const handleDeletePhoto = () => {
+  const handleDeletePhoto = async () => {
     if (confirm("Are you sure you want to delete the custom profile photo and restore the default?")) {
       setCustomProfileImage(null);
-      localStorage.removeItem("cmsAboutProfileImage");
+      await removeStore('cmsAboutProfileImage' as CMSKey);
       setShowPhotoMenu(false);
-      setHasChanges(true);
     }
   };
 
@@ -253,7 +244,7 @@ export default function About() {
                       if (target.src !== profileImage) {
                         target.src = profileImage;
                         setCustomProfileImage(null);
-                        localStorage.removeItem("cmsAboutProfileImage");
+                        removeStore('cmsAboutProfileImage' as CMSKey);
                       }
                     }}
                   />

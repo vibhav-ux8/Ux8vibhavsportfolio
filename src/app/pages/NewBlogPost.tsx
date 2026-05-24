@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useCMS } from "../contexts/CMSContext";
+import type { CMSKey } from "../lib/cms";
 import { motion } from "motion/react";
 import {
   ArrowLeft, Save, Calendar, Clock,
@@ -11,6 +13,7 @@ import { ImageUpload } from "../components/ImageUpload";
 
 export default function NewBlogPost() {
   const navigate = useNavigate();
+  const { store, setStore } = useCMS();
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
 
   // Initialize empty post data
@@ -27,62 +30,25 @@ export default function NewBlogPost() {
     content: [] as ContentBlock[],
   });
 
-  const handleSave = () => {
+  const saveBlogPost = async (redirect: string) => {
     try {
-      // Generate slug from title
       const slug = postData.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
-      
       const updatedPost = { ...postData, slug };
-
-      // Get existing saved posts
-      const savedPosts = localStorage.getItem("cmsBlogPosts");
-      let posts = savedPosts ? JSON.parse(savedPosts) : [];
-
-      // Add the new post
+      const posts: any[] = [...(store['cmsBlogPosts'] ?? [])];
       posts.push(updatedPost);
-
-      // Save to localStorage
-      localStorage.setItem("cmsBlogPosts", JSON.stringify(posts));
-      alert("Blog post saved successfully!");
-      
-      // Navigate to edit page for further editing
-      navigate(`/blog/edit/${slug}`);
+      await setStore('cmsBlogPosts' as CMSKey, posts);
+      navigate(redirect === 'edit' ? `/blog/edit/${slug}` : '/blog');
     } catch (error) {
       console.error("Error saving blog post:", error);
       alert("Error saving blog post. Please try again.");
     }
   };
 
-  const handlePublish = () => {
-    try {
-      // Generate slug from title
-      const slug = postData.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-
-      const updatedPost = { ...postData, slug };
-
-      // Get existing saved posts
-      const savedPosts = localStorage.getItem("cmsBlogPosts");
-      let posts = savedPosts ? JSON.parse(savedPosts) : [];
-
-      // Add the new post
-      posts.push(updatedPost);
-
-      // Save to localStorage
-      localStorage.setItem("cmsBlogPosts", JSON.stringify(posts));
-
-      alert("Blog post published successfully!");
-      navigate("/blog");
-    } catch (error) {
-      console.error("Error publishing blog post:", error);
-      alert("Error publishing blog post. Please try again.");
-    }
-  };
+  const handleSave = () => saveBlogPost('edit');
+  const handlePublish = () => saveBlogPost('blog');
 
   // Content Block Management
   const addContentBlock = (type: ContentBlock['type']) => {
