@@ -71,7 +71,7 @@ const CustomNextArrow = (props: any) => {
 export default function CaseStudy() {
   const { id } = useParams<{ id: string }>();
   const { isAdminView } = useAdminView();
-  const { store, setStore } = useCMS();
+  const { store, setStore, loading: cmsLoading } = useCMS();
 
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("cover");
@@ -479,6 +479,10 @@ export default function CaseStudy() {
     }
   }, [isFullscreen]);
   
+  if (cmsLoading) {
+    return null;
+  }
+
   if (!project) {
     return <Navigate to="/projects" replace />;
   }
